@@ -20,7 +20,7 @@
     <a class="skip-link" href="#main-content">Salta al contenuto principale</a>
     @php
         $notificationUnreadCount = auth()->check()
-            ? auth()->user()->notifications()->where('is_read', false)->count()
+            ? auth()->user()->notifications()->where('letta', false)->count()
             : 0;
     @endphp
 
@@ -43,9 +43,9 @@
                         @auth
                             <li class="nav-item"><a class="nav-link" href="{{ route('events.my-registrations') }}">Le mie adesioni</a></li>
                         @endauth
-                        @if(auth()->user()?->is_staff)
+                        @role('admin')
                             <li class="nav-item"><a class="nav-link" href="{{ route('events.manage-list') }}">Gestione eventi</a></li>
-                        @endif
+                        @endrole
                     </ul>
                     <div class="d-flex align-items-center gap-2 nav-actions">
                         @auth

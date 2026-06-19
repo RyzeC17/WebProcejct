@@ -17,18 +17,18 @@ class NotificationService
         }
 
         return Notification::query()->create([
-            'recipient_id' => $recipient->id,
-            'notification_type' => $type,
-            'text' => $text,
-            'event_id' => $event?->id,
-            'registration_id' => $registration?->id,
-            'is_read' => false,
+            'destinatario_id' => $recipient->id,
+            'tipo_notifica' => $type,
+            'testo' => $text,
+            'evento_id' => $event?->id,
+            'iscrizione_id' => $registration?->id,
+            'letta' => false,
         ]);
     }
 
     public function markAllAsRead(User $user): int
     {
-        $notifications = Notification::query()->where('recipient_id', $user->id)->where('is_read', false)->get();
+        $notifications = Notification::query()->where('destinatario_id', $user->id)->where('letta', false)->get();
         foreach ($notifications as $notification) {
             $notification->markAsRead();
         }
@@ -40,18 +40,18 @@ class NotificationService
     {
         $notification->loadMissing('event', 'registration');
 
-        if ($user->is_staff && $notification->event_id) {
-            return route('events.manage-update', $notification->event_id);
+        if ($user->hasRole('admin') && $notification->evento_id) {
+            return route('events.manage-update', $notification->evento_id);
         }
 
-        if ($notification->registration_id && $notification->registration?->user_id === $user->id) {
+        if ($notification->iscrizione_id && $notification->registration?->utente_id === $user->id) {
             return route('events.my-registrations');
         }
 
         if (
-            $notification->event_id
+            $notification->evento_id
             && $notification->event
-            && in_array($notification->event->status, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)
+            && in_array($notification->event->stato, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)
         ) {
             return route('events.detail', $notification->event->slug);
         }
@@ -63,10 +63,10 @@ class NotificationService
     {
         return [
             'id' => $notification->id,
-            'text' => $notification->text,
-            'notification_type' => $notification->notification_type,
-            'is_read' => (bool) $notification->is_read,
-            'created_at' => $notification->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'text' => $notification->testo,
+            'notification_type' => $notification->tipo_notifica,
+            'is_read' => (bool) $notification->letta,
+            'created_at' => $notification->creato_il?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
             'target_url' => $this->targetUrl($notification, $user),
         ];
     }
@@ -80,18 +80,18 @@ class NotificationService
         $count = 0;
 
         Event::query()
-            ->where('status', Event::STATUS_PUBLISHED)
-            ->whereBetween('registration_deadline', [$now, $tomorrow])
-            ->with(['registrations' => fn ($query) => $query->where('status', Registration::STATUS_ACTIVE)->with('user')])
+            ->where('stato', Event::STATUS_PUBLISHED)
+            ->whereBetween('scadenza_iscrizioni', [$now, $tomorrow])
+            ->with(['registrations' => fn ($query) => $query->where('stato', Registration::STATUS_ACTIVE)->with('user')])
             ->chunkById(100, function ($events) use (&$count, $todayStart, $todayEnd) {
                 foreach ($events as $event) {
                     foreach ($event->registrations as $registration) {
                         $alreadySentToday = Notification::query()
-                            ->where('recipient_id', $registration->user_id)
-                            ->where('notification_type', Notification::TYPE_REGISTRATION_DEADLINE_REMINDER)
-                            ->where('event_id', $event->id)
-                            ->where('registration_id', $registration->id)
-                            ->whereBetween('created_at', [$todayStart, $todayEnd])
+                            ->where('destinatario_id', $registration->utente_id)
+                            ->where('tipo_notifica', Notification::TYPE_REGISTRATION_DEADLINE_REMINDER)
+                            ->where('evento_id', $event->id)
+                            ->where('iscrizione_id', $registration->id)
+                            ->whereBetween('creato_il', [$todayStart, $todayEnd])
                             ->exists();
 
                         if ($alreadySentToday) {
@@ -101,7 +101,7 @@ class NotificationService
                         $this->create(
                             $registration->user,
                             Notification::TYPE_REGISTRATION_DEADLINE_REMINDER,
-                            "Il termine iscrizioni per l'evento '{$event->title}' e vicino.",
+                            "Il termine iscrizioni per l'evento '{$event->titolo}' e vicino.",
                             $event,
                             $registration,
                         );

@@ -12,10 +12,10 @@
                         <span class="eyebrow">Accesso utente</span>
                         <h1 class="h3 mb-3">Accedi</h1>
                         <p class="text-muted">Entra per aderire agli eventi e gestire la tua area personale.</p>
-                        <form method="post" novalidate>
+                        <form method="post" action="{{ route('accounts.login.store') }}" novalidate>
                             @csrf
                             <div class="mb-3 field-group form-group">
-                                <label class="form-label" for="username">Username</label>
+                                <label class="form-label" for="username">Username o email</label>
                                 <input class="form-control @error('username') is-invalid @enderror" type="text" name="username" id="username" value="{{ old('username') }}" autocomplete="username" required>
                                 @error('username')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>

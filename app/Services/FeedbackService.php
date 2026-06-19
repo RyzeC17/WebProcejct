@@ -20,14 +20,14 @@ class FeedbackService
         $this->events->syncEventStatus($event);
         $event->refresh();
 
-        if ($event->status !== Event::STATUS_COMPLETED) {
+        if ($event->stato !== Event::STATUS_COMPLETED) {
             throw ValidationException::withMessages(['event' => 'Il feedback e disponibile solo per eventi completati.']);
         }
 
         $registration = Registration::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $user->id)
-            ->where('status', Registration::STATUS_ACTIVE)
+            ->where('evento_id', $event->id)
+            ->where('utente_id', $user->id)
+            ->where('stato', Registration::STATUS_ACTIVE)
             ->first();
 
         if (! $registration) {
@@ -47,13 +47,13 @@ class FeedbackService
 
         return EventFeedback::query()->updateOrCreate(
             [
-                'event_id' => $event->id,
-                'user_id' => $user->id,
+                'evento_id' => $event->id,
+                'utente_id' => $user->id,
             ],
             [
-                'registration_id' => $registration->id,
-                'rating' => $rating,
-                'comment' => trim($comment),
+                'iscrizione_id' => $registration->id,
+                'valutazione' => $rating,
+                'commento' => trim($comment),
             ],
         );
     }
@@ -62,11 +62,11 @@ class FeedbackService
     {
         $feedbacks = $event->feedbacks();
         $reviewCount = (int) $feedbacks->count();
-        $average = $reviewCount > 0 ? round((float) $feedbacks->avg('rating'), 1) : null;
+        $average = $reviewCount > 0 ? round((float) $feedbacks->avg('valutazione'), 1) : null;
         $distribution = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
 
-        foreach ($event->feedbacks()->selectRaw('rating, count(*) as aggregate_count')->groupBy('rating')->get() as $row) {
-            $distribution[(int) $row->rating] = (int) $row->aggregate_count;
+        foreach ($event->feedbacks()->selectRaw('valutazione, count(*) as aggregate_count')->groupBy('valutazione')->get() as $row) {
+            $distribution[(int) $row->valutazione] = (int) $row->aggregate_count;
         }
 
         return [

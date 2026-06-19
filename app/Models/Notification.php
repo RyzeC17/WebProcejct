@@ -26,57 +26,58 @@ class Notification extends Model
 
     protected $table = 'notifiche';
 
+    public const CREATED_AT = 'creato_il';
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'recipient_id',
-        'notification_type',
-        'text',
-        'event_id',
-        'registration_id',
-        'is_read',
-        'created_at',
-        'read_at',
+        'destinatario_id',
+        'tipo_notifica',
+        'testo',
+        'evento_id',
+        'iscrizione_id',
+        'letta',
+        'creato_il',
+        'letta_il',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_read' => 'boolean',
-            'created_at' => 'datetime',
-            'read_at' => 'datetime',
+            'letta' => 'boolean',
+            'creato_il' => 'datetime',
+            'letta_il' => 'datetime',
         ];
     }
 
     public function recipient(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'recipient_id');
+        return $this->belongsTo(User::class, 'destinatario_id');
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Event::class, 'evento_id');
     }
 
     public function registration(): BelongsTo
     {
-        return $this->belongsTo(Registration::class, 'registration_id');
+        return $this->belongsTo(Registration::class, 'iscrizione_id');
     }
 
     public function getNotificationTypeLabelAttribute(): string
     {
-        return self::TYPES[$this->notification_type] ?? $this->notification_type;
+        return self::TYPES[$this->tipo_notifica] ?? $this->tipo_notifica;
     }
 
     public function markAsRead(): void
     {
-        if ($this->is_read) {
+        if ($this->letta) {
             return;
         }
 
         $this->forceFill([
-            'is_read' => true,
-            'read_at' => Carbon::now(),
+            'letta' => true,
+            'letta_il' => Carbon::now(),
         ])->save();
     }
 }

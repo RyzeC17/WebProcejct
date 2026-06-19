@@ -24,19 +24,19 @@ class EventManagementController extends Controller
         $query = Event::query()
             ->with('createdBy')
             ->withRegistrationCounts()
-            ->orderBy('start_datetime')
-            ->orderBy('title');
+            ->orderBy('inizio_il')
+            ->orderBy('titolo');
         $search = trim((string) $request->query('q', ''));
         $status = trim((string) $request->query('status', ''));
 
         if ($search !== '') {
             $query->where(fn ($inner) => $inner
-                ->where('title', 'like', "%{$search}%")
-                ->orWhere('venue_name', 'like', "%{$search}%"));
+                ->where('titolo', 'like', "%{$search}%")
+                ->orWhere('nome_luogo', 'like', "%{$search}%"));
         }
 
         if ($status !== '') {
-            $query->where('status', $status);
+            $query->where('stato', $status);
         }
 
         return view('events.manage_list', [
@@ -49,7 +49,7 @@ class EventManagementController extends Controller
     public function create(): View
     {
         return view('events.manage_form', [
-            'event' => new Event(['status' => Event::STATUS_DRAFT, 'price' => 0]),
+            'event' => new Event(['stato' => Event::STATUS_DRAFT, 'prezzo' => 0]),
             'eventTypes' => Event::EVENT_TYPES,
             'statusChoices' => Event::STATUSES,
             'fieldTypes' => EventCustomField::FIELD_TYPES,
@@ -122,7 +122,7 @@ class EventManagementController extends Controller
         $event = Event::query()->findOrFail($eventId);
         $event = $events->changeStatus($event, (string) $request->input('status'), $request->user());
 
-        return ApiResponse::json('Stato aggiornato.', true, ['status' => $event->status]);
+        return ApiResponse::json('Stato aggiornato.', true, ['status' => $event->stato]);
     }
 
     public function registrants(int $eventId): View
@@ -153,16 +153,16 @@ class EventManagementController extends Controller
     {
         $customFields = $event->customFields()->with('options')->get();
         $registrations = Registration::query()
-            ->where('event_id', $event->id)
+            ->where('evento_id', $event->id)
             ->with('user', 'customAnswers.field', 'customAnswers.selectedOption')
-            ->orderByDesc('created_at')
+            ->orderByDesc('creato_il')
             ->get();
 
         $registrations->each(function (Registration $registration) use ($customFields) {
-            $answers = $registration->customAnswers->keyBy('field_id');
+            $answers = $registration->customAnswers->keyBy('campo_id');
             $registration->custom_answer_pairs = $customFields
                 ->map(fn ($field) => [
-                    'label' => $field->label,
+                    'label' => $field->etichetta,
                     'value' => $answers->get($field->id)?->display_value ?: '-',
                 ])
                 ->all();
@@ -170,25 +170,25 @@ class EventManagementController extends Controller
 
         $aggregateAnswers = $customFields->map(function (EventCustomField $field) use ($registrations) {
             $fieldAnswers = $registrations
-                ->flatMap(fn (Registration $registration) => $registration->customAnswers->where('field_id', $field->id)
+                ->flatMap(fn (Registration $registration) => $registration->customAnswers->where('campo_id', $field->id)
                     ->map(fn ($answer) => ['registration' => $registration, 'answer' => $answer]))
                 ->values();
 
             $item = [
                 'field' => $field,
-                'field_type' => $field->field_type,
+                'field_type' => $field->tipo_campo,
                 'count' => $fieldAnswers->count(),
             ];
 
-            if ($field->field_type === EventCustomField::TYPE_TEXT) {
+            if ($field->tipo_campo === EventCustomField::TYPE_TEXT) {
                 $item['values'] = $fieldAnswers
                     ->map(fn ($pair) => [
                         'user_label' => $pair['registration']->user->display_name,
-                        'value' => $pair['answer']->text_value,
+                        'value' => $pair['answer']->valore_testo,
                     ])
                     ->all();
-            } elseif ($field->field_type === EventCustomField::TYPE_NUMBER) {
-                $values = $fieldAnswers->map(fn ($pair) => (float) $pair['answer']->number_value);
+            } elseif ($field->tipo_campo === EventCustomField::TYPE_NUMBER) {
+                $values = $fieldAnswers->map(fn ($pair) => (float) $pair['answer']->valore_numero);
                 $item['min'] = $values->isNotEmpty() ? $values->min() : null;
                 $item['max'] = $values->isNotEmpty() ? $values->max() : null;
                 $item['avg'] = $values->isNotEmpty() ? $values->avg() : null;

@@ -12,7 +12,7 @@
                         <span class="eyebrow">Nuovo account</span>
                         <h1 class="h3 mb-3">Crea un account</h1>
                         <p class="text-muted">Con un profilo registrato puoi aderire agli eventi e gestire le tue adesioni.</p>
-                        <form method="post" novalidate>
+                        <form method="post" action="{{ route('accounts.register.store') }}" novalidate>
                             @csrf
                             <div class="row g-3">
                                 @foreach ([

@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -25,10 +26,13 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): RedirectResponse
     {
+        $login = $request->string('username')->toString();
+        $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'nome_utente';
+
         $credentials = [
-            'username' => $request->string('username')->toString(),
+            $loginField => $login,
             'password' => $request->string('password')->toString(),
-            'is_active' => true,
+            'attivo' => true,
         ];
 
         if (! Auth::attempt($credentials)) {
@@ -38,7 +42,7 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
-        $request->user()->forceFill(['last_login' => Carbon::now()])->save();
+        $request->user()->forceFill(['ultimo_accesso' => Carbon::now()])->save();
 
         return redirect()->intended(route('events.list'))->with('success', 'Accesso effettuato con successo.');
     }
@@ -55,16 +59,19 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): RedirectResponse
     {
         $user = User::query()->create([
-            'first_name' => $request->string('first_name')->trim()->toString(),
-            'last_name' => $request->string('last_name')->trim()->toString(),
-            'username' => $request->string('username')->trim()->toString(),
+            'nome' => $request->string('first_name')->trim()->toString(),
+            'cognome' => $request->string('last_name')->trim()->toString(),
+            'nome_utente' => $request->string('username')->trim()->toString(),
             'email' => $request->string('email')->trim()->toString(),
             'password' => Hash::make($request->string('password')->toString()),
-            'is_staff' => false,
-            'is_active' => true,
-            'is_superuser' => false,
-            'date_joined' => Carbon::now(),
+            'attivo' => true,
+            'data_iscrizione' => Carbon::now(),
         ]);
+
+        $user->assignRole(Role::query()->firstOrCreate([
+            'name' => 'user',
+            'guard_name' => 'web',
+        ]));
 
         Auth::login($user);
         $request->session()->regenerate();

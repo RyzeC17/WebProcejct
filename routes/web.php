@@ -29,7 +29,7 @@ Route::prefix('eventi')->name('events.')->group(function () {
         Route::post('/{slug}/feedback/', [EventController::class, 'submitFeedback'])->name('submit-feedback');
     });
 
-    Route::middleware(['auth', 'staff'])->prefix('gestione/eventi')->group(function () {
+    Route::middleware(['auth', 'role:admin'])->prefix('gestione/eventi')->group(function () {
         Route::get('/', [EventManagementController::class, 'index'])->name('manage-list');
         Route::get('/nuovo/', [EventManagementController::class, 'create'])->name('manage-create');
         Route::post('/nuovo/', [EventManagementController::class, 'store'])->name('manage-store');
@@ -52,4 +52,4 @@ Route::middleware('auth')->prefix('notifiche')->name('notifications.')->group(fu
     Route::post('/leggi-tutte/', [NotificationController::class, 'markAllRead'])->name('mark-all-read');
 });
 
-Route::get('/admin/', fn () => redirect()->route('events.manage-list'))->middleware(['auth', 'staff'])->name('admin.redirect');
+Route::get('/admin/', fn () => redirect()->route('events.manage-list'))->middleware(['auth', 'role:admin'])->name('admin.redirect');

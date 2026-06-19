@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Iscritti a '.$event->title.' | Event Hub')
+@section('title', 'Iscritti a '.$event->titolo.' | Event Hub')
 
 @section('content')
 <section class="py-5">
@@ -8,8 +8,8 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4 section-heading">
             <div>
                 <span class="eyebrow">Backoffice amministratore</span>
-                <h1 class="display-6 fw-bold mb-1">Iscritti a {{ $event->title }}</h1>
-                <p class="text-muted mb-0">{{ $event->start_datetime?->format('d/m/Y H:i') }} &middot; {{ $event->venue_name }}</p>
+                <h1 class="display-6 fw-bold mb-1">Iscritti a {{ $event->titolo }}</h1>
+                <p class="text-muted mb-0">{{ $event->inizio_il?->format('d/m/Y H:i') }} &middot; {{ $event->nome_luogo }}</p>
             </div>
             <a class="btn btn-outline-dark" href="{{ route('events.manage-list') }}">Torna alla lista</a>
         </div>
@@ -23,7 +23,7 @@
                         <th scope="col">Email</th>
                         <th scope="col">Stato</th>
                         <th scope="col">Nota</th>
-                        @foreach ($customFields as $customField)<th scope="col">{{ $customField->label }}</th>@endforeach
+                        @foreach ($customFields as $customField)<th scope="col">{{ $customField->etichetta }}</th>@endforeach
                         <th scope="col">Data adesione</th>
                     </tr>
                 </thead>
@@ -33,11 +33,11 @@
                             <td data-label="Utente">{{ $registration->user->display_name }}</td>
                             <td data-label="Email">{{ $registration->user->email }}</td>
                             <td data-label="Stato">{{ $registration->status_label }}</td>
-                            <td data-label="Nota">{{ $registration->attendee_note ?: '-' }}</td>
+                            <td data-label="Nota">{{ $registration->nota_partecipante ?: '-' }}</td>
                             @foreach ($registration->custom_answer_pairs as $pair)
                                 <td data-label="{{ $pair['label'] }}">{{ $pair['value'] }}</td>
                             @endforeach
-                            <td data-label="Data adesione">{{ $registration->created_at?->format('d/m/Y H:i') }}</td>
+                            <td data-label="Data adesione">{{ $registration->creato_il?->format('d/m/Y H:i') }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="{{ $registrantColumnCount }}" class="text-center py-5 text-muted">Nessuna adesione registrata.</td></tr>
@@ -55,7 +55,7 @@
                             <article class="aggregate-card">
                                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                                     <div>
-                                        <h3 class="h5 mb-1">{{ $aggregate['field']->label }}</h3>
+                                        <h3 class="h5 mb-1">{{ $aggregate['field']->etichetta }}</h3>
                                         <div class="small text-muted">{{ $aggregate['field']->field_type_label }} &middot; {{ $aggregate['count'] }} risposta/e</div>
                                     </div>
                                     <div class="aggregate-content">

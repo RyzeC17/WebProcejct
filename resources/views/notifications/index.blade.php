@@ -19,17 +19,17 @@
 
         <div class="notification-feed notification-feed-page">
             @forelse ($notifications as $notification)
-                <article class="card border-0 shadow-soft notification-item {{ $notification->is_read ? '' : 'is-unread' }}" data-notification-item data-notification-id="{{ $notification->id }}">
+                <article class="card border-0 shadow-soft notification-item {{ $notification->letta ? '' : 'is-unread' }}" data-notification-item data-notification-id="{{ $notification->id }}">
                     <div class="card-body p-4">
                         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                             <div>
                                 <div class="small text-muted mb-2">{{ $notification->notification_type_label }}</div>
-                                <p class="mb-2">{{ $notification->text }}</p>
-                                <div class="small text-muted">{{ $notification->created_at?->format('d/m/Y H:i') }}</div>
+                                <p class="mb-2">{{ $notification->testo }}</p>
+                                <div class="small text-muted">{{ $notification->creato_il?->format('d/m/Y H:i') }}</div>
                             </div>
                             <div class="d-flex flex-column align-items-lg-end gap-2">
                                 <a class="btn btn-outline-dark btn-sm" href="{{ $notification->target_url }}">Apri riferimento</a>
-                                <button class="btn btn-outline-dark btn-sm" type="button" data-notification-mark-read-url="{{ route('notifications.mark-read', $notification->id) }}" @disabled($notification->is_read)>
+                                <button class="btn btn-outline-dark btn-sm" type="button" data-notification-mark-read-url="{{ route('notifications.mark-read', $notification->id) }}" @disabled($notification->letta)>
                                     Segna come letta
                                 </button>
                             </div>

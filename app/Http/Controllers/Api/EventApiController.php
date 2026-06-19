@@ -26,7 +26,7 @@ class EventApiController extends Controller
             ->publicVisible()
             ->with('customFields.options')
             ->withRegistrationCounts()
-            ->orderBy('start_datetime')
+            ->orderBy('inizio_il')
             ->get();
 
         if ($this->wantsXml($request)) {
@@ -62,7 +62,7 @@ class EventApiController extends Controller
         $event->refresh()->load('customFields.options');
         $event->loadRegistrationCounts();
 
-        if (! $request->user()?->is_staff && ! in_array($event->status, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)) {
+        if (! $request->user()?->hasRole('admin') && ! in_array($event->stato, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)) {
             abort(404);
         }
 
@@ -80,25 +80,25 @@ class EventApiController extends Controller
         if (! $request->user()) {
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
-        if (! $request->user()->is_staff) {
+        if (! $request->user()->hasRole('admin')) {
             return ApiResponse::json('Permessi insufficienti.', false, [], [], 403);
         }
 
         $event = Event::query()->findOrFail($eventId);
-        $payload = array_merge($event->only([
-            'title',
-            'description',
-            'venue_name',
-            'venue_address',
-            'notes',
-            'max_participants',
-            'price',
-            'start_datetime',
-            'end_datetime',
-            'registration_deadline',
-            'event_type',
-            'status',
-        ]), $request->all());
+        $payload = array_merge([
+            'title' => $event->titolo,
+            'description' => $event->descrizione,
+            'venue_name' => $event->nome_luogo,
+            'venue_address' => $event->indirizzo_luogo,
+            'notes' => $event->note,
+            'max_participants' => $event->max_partecipanti,
+            'price' => $event->prezzo,
+            'start_datetime' => $event->inizio_il,
+            'end_datetime' => $event->fine_il,
+            'registration_deadline' => $event->scadenza_iscrizioni,
+            'event_type' => $event->tipo_evento,
+            'status' => $event->stato,
+        ], $request->all());
 
         $validator = Validator::make($payload, [
             'title' => ['required', 'string', 'max:255'],
@@ -122,7 +122,21 @@ class EventApiController extends Controller
         try {
             $customFieldsProvided = $request->has('custom_fields');
             $customFields = $events->normalizeCustomFieldPayload($request->input('custom_fields'));
-            $updated = $events->update($event, $validator->validated(), $customFields, $customFieldsProvided, $request->user());
+            $validated = $validator->validated();
+            $updated = $events->update($event, [
+                'titolo' => $validated['title'],
+                'descrizione' => $validated['description'],
+                'nome_luogo' => $validated['venue_name'],
+                'indirizzo_luogo' => $validated['venue_address'],
+                'note' => $validated['notes'] ?? '',
+                'max_partecipanti' => $validated['max_participants'],
+                'prezzo' => $validated['price'],
+                'inizio_il' => $validated['start_datetime'],
+                'fine_il' => $validated['end_datetime'],
+                'scadenza_iscrizioni' => $validated['registration_deadline'],
+                'tipo_evento' => $validated['event_type'],
+                'stato' => $validated['status'],
+            ], $customFields, $customFieldsProvided, $request->user());
         } catch (ValidationException $exception) {
             return $this->jsonValidationError($exception);
         }
@@ -137,7 +151,7 @@ class EventApiController extends Controller
         if (! $request->user()) {
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
-        if (! $request->user()->is_staff) {
+        if (! $request->user()->hasRole('admin')) {
             return ApiResponse::json('Permessi insufficienti.', false, [], [], 403);
         }
 
@@ -168,10 +182,10 @@ class EventApiController extends Controller
         }
 
         $items = Event::query()
-            ->where('status', Event::STATUS_PUBLISHED)
-            ->whereDate('start_datetime', '<', $rangeEnd->toDateString())
-            ->whereDate('end_datetime', '>=', $rangeStart->toDateString())
-            ->orderBy('start_datetime')
+            ->where('stato', Event::STATUS_PUBLISHED)
+            ->whereDate('inizio_il', '<', $rangeEnd->toDateString())
+            ->whereDate('fine_il', '>=', $rangeStart->toDateString())
+            ->orderBy('inizio_il')
             ->get();
 
         return ApiResponse::json('Calendario recuperato.', true, [
@@ -184,7 +198,7 @@ class EventApiController extends Controller
         if (! $request->user()) {
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
-        if (! $request->user()->is_staff) {
+        if (! $request->user()->hasRole('admin')) {
             return ApiResponse::json('Permessi insufficienti.', false, [], [], 403);
         }
 
@@ -201,7 +215,7 @@ class EventApiController extends Controller
         $events->syncEventStatus($event);
         $event->refresh();
 
-        if (! in_array($event->status, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true) && ! $request->user()?->is_staff) {
+        if (! in_array($event->stato, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true) && ! $request->user()?->hasRole('admin')) {
             abort(404);
         }
 

@@ -9,47 +9,50 @@ class RegistrationCustomAnswer extends Model
 {
     protected $table = 'risposte_iscrizione';
 
+    public const CREATED_AT = 'creato_il';
+    public const UPDATED_AT = 'aggiornato_il';
+
     protected $fillable = [
-        'registration_id',
-        'field_id',
-        'text_value',
-        'number_value',
-        'boolean_value',
-        'selected_option_id',
+        'iscrizione_id',
+        'campo_id',
+        'valore_testo',
+        'valore_numero',
+        'valore_booleano',
+        'opzione_selezionata_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'number_value' => 'decimal:4',
-            'boolean_value' => 'boolean',
+            'valore_numero' => 'decimal:4',
+            'valore_booleano' => 'boolean',
         ];
     }
 
     public function registration(): BelongsTo
     {
-        return $this->belongsTo(Registration::class, 'registration_id');
+        return $this->belongsTo(Registration::class, 'iscrizione_id');
     }
 
     public function field(): BelongsTo
     {
-        return $this->belongsTo(EventCustomField::class, 'field_id');
+        return $this->belongsTo(EventCustomField::class, 'campo_id');
     }
 
     public function selectedOption(): BelongsTo
     {
-        return $this->belongsTo(FieldOption::class, 'selected_option_id');
+        return $this->belongsTo(FieldOption::class, 'opzione_selezionata_id');
     }
 
     public function getDisplayValueAttribute(): string
     {
-        $fieldType = $this->field?->field_type;
+        $fieldType = $this->field?->tipo_campo;
 
         return match ($fieldType) {
-            EventCustomField::TYPE_TEXT => (string) $this->text_value,
-            EventCustomField::TYPE_NUMBER => (string) $this->number_value,
-            EventCustomField::TYPE_BOOLEAN => $this->boolean_value ? 'Si' : 'No',
-            EventCustomField::TYPE_SELECT => (string) ($this->selectedOption?->value ?? ''),
+            EventCustomField::TYPE_TEXT => (string) $this->valore_testo,
+            EventCustomField::TYPE_NUMBER => (string) $this->valore_numero,
+            EventCustomField::TYPE_BOOLEAN => $this->valore_booleano ? 'Si' : 'No',
+            EventCustomField::TYPE_SELECT => (string) ($this->selectedOption?->valore ?? ''),
             default => '',
         };
     }

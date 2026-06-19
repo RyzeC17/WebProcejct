@@ -67,9 +67,9 @@
                                 <span class="badge text-bg-light">{{ $event->event_type_label }}</span>
                                 <span class="status-pill status-{{ $event->operational_state }}">{{ $event->operational_state_label }}</span>
                             </div>
-                            <h3 class="h5 mt-3">{{ $event->title }}</h3>
-                            <p class="text-muted small mb-2">{{ $event->start_datetime?->format('d/m/Y H:i') }} &middot; {{ $event->venue_name }}</p>
-                            <p class="mb-3">{{ Str::limit($event->description, 120) }}</p>
+                            <h3 class="h5 mt-3">{{ $event->titolo }}</h3>
+                            <p class="text-muted small mb-2">{{ $event->inizio_il?->format('d/m/Y H:i') }} &middot; {{ $event->nome_luogo }}</p>
+                            <p class="mb-3">{{ Str::limit($event->descrizione, 120) }}</p>
                             <div class="d-flex justify-content-between align-items-center gap-3 mt-auto">
                                 <span class="small text-muted">{{ $event->remaining_seats }} posti disponibili</span>
                                 <a class="btn btn-sm btn-outline-dark" href="{{ route('events.detail', $event->slug) }}">Apri dettaglio</a>

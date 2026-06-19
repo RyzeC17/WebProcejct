@@ -11,9 +11,9 @@
                 <h1 class="display-6 fw-bold mb-2">Eventi disponibili</h1>
                 <p class="text-muted mb-0">Filtra in tempo reale gli eventi pubblicati senza ricaricare la pagina.</p>
             </div>
-            @if(auth()->user()?->is_staff)
+            @role('admin')
                 <a class="btn btn-dark" href="{{ route('events.manage-create') }}">Nuovo evento</a>
-            @endif
+            @endrole
         </div>
 
         <form class="card border-0 shadow-soft p-3 p-lg-4 mb-4 filter-panel" data-filter-form data-target="#event-list-container" role="search">

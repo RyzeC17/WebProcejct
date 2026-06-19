@@ -22,35 +22,38 @@ class EventCustomField extends Model
 
     protected $table = 'campi_evento';
 
+    public const CREATED_AT = 'creato_il';
+    public const UPDATED_AT = 'aggiornato_il';
+
     protected $fillable = [
-        'event_id',
-        'label',
-        'field_type',
-        'is_required',
-        'display_order',
+        'evento_id',
+        'etichetta',
+        'tipo_campo',
+        'obbligatorio',
+        'ordine_visualizzazione',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_required' => 'boolean',
-            'display_order' => 'integer',
+            'obbligatorio' => 'boolean',
+            'ordine_visualizzazione' => 'integer',
         ];
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Event::class, 'evento_id');
     }
 
     public function options(): HasMany
     {
-        return $this->hasMany(FieldOption::class, 'field_id')->orderBy('display_order')->orderBy('id');
+        return $this->hasMany(FieldOption::class, 'campo_id')->orderBy('ordine_visualizzazione')->orderBy('id');
     }
 
     public function answers(): HasMany
     {
-        return $this->hasMany(RegistrationCustomAnswer::class, 'field_id');
+        return $this->hasMany(RegistrationCustomAnswer::class, 'campo_id');
     }
 
     public function getFormFieldNameAttribute(): string
@@ -60,6 +63,6 @@ class EventCustomField extends Model
 
     public function getFieldTypeLabelAttribute(): string
     {
-        return self::FIELD_TYPES[$this->field_type] ?? $this->field_type;
+        return self::FIELD_TYPES[$this->tipo_campo] ?? $this->tipo_campo;
     }
 }

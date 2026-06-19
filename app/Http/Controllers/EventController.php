@@ -28,8 +28,8 @@ class EventController extends Controller
             ->publicVisible()
             ->with('createdBy')
             ->withRegistrationCounts()
-            ->orderBy('start_datetime')
-            ->orderBy('title');
+            ->orderBy('inizio_il')
+            ->orderBy('titolo');
 
         $search = trim((string) $request->query('q', ''));
         $eventType = trim((string) $request->query('event_type', ''));
@@ -38,19 +38,19 @@ class EventController extends Controller
 
         if ($search !== '') {
             $query->where(function ($inner) use ($search) {
-                $inner->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('venue_name', 'like', "%{$search}%");
+                $inner->where('titolo', 'like', "%{$search}%")
+                    ->orWhere('descrizione', 'like', "%{$search}%")
+                    ->orWhere('nome_luogo', 'like', "%{$search}%");
             });
         }
 
         if ($eventType !== '') {
-            $query->where('event_type', $eventType);
+            $query->where('tipo_evento', $eventType);
         }
 
         if ($eventDate !== '') {
             try {
-                $query->whereDate('start_datetime', Carbon::parse($eventDate)->toDateString());
+                $query->whereDate('inizio_il', Carbon::parse($eventDate)->toDateString());
             } catch (\Throwable) {
                 $query->whereRaw('1 = 0');
             }
@@ -79,7 +79,7 @@ class EventController extends Controller
         $query = Event::query()
             ->with('createdBy', 'customFields.options')
             ->withRegistrationCounts();
-        if (! $request->user()?->is_staff) {
+        if (! $request->user()?->hasRole('admin')) {
             $query->publicVisible();
         }
 
@@ -88,15 +88,15 @@ class EventController extends Controller
         $event->refresh()->load('customFields.options');
         $event->loadRegistrationCounts();
 
-        if (! $request->user()?->is_staff && ! in_array($event->status, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)) {
+        if (! $request->user()?->hasRole('admin') && ! in_array($event->stato, [Event::STATUS_PUBLISHED, Event::STATUS_COMPLETED], true)) {
             abort(404);
         }
 
         $registration = null;
         if ($request->user()) {
             $registration = Registration::query()
-                ->where('event_id', $event->id)
-                ->where('user_id', $request->user()->id)
+                ->where('evento_id', $event->id)
+                ->where('utente_id', $request->user()->id)
                 ->with('customAnswers.field', 'customAnswers.selectedOption')
                 ->first();
         }
@@ -106,15 +106,15 @@ class EventController extends Controller
             'registration' => $registration,
         ];
 
-        if ($event->status === Event::STATUS_COMPLETED) {
+        if ($event->stato === Event::STATUS_COMPLETED) {
             $context['feedbackSummary'] = $feedbacks->summary($event);
             $context['feedbacks'] = $event->feedbacks()->with('user')->limit(20)->get();
             $context['userFeedback'] = $request->user()
-                ? EventFeedback::query()->where('event_id', $event->id)->where('user_id', $request->user()->id)->first()
+                ? EventFeedback::query()->where('evento_id', $event->id)->where('utente_id', $request->user()->id)->first()
                 : null;
             $context['canLeaveFeedback'] = $request->user()
                 && $registration
-                && $registration->status === Registration::STATUS_ACTIVE;
+                && $registration->stato === Registration::STATUS_ACTIVE;
         }
 
         return view('events.detail', $context);
@@ -131,9 +131,9 @@ class EventController extends Controller
 
         return view('events.my_registrations', [
             'registrations' => Registration::query()
-                ->where('user_id', $request->user()->id)
+                ->where('utente_id', $request->user()->id)
                 ->with('event')
-                ->latest('created_at')
+                ->latest('creato_il')
                 ->get(),
         ]);
     }
@@ -173,13 +173,13 @@ class EventController extends Controller
         }
 
         return ApiResponse::json(
-            $registration->status === Registration::STATUS_WAITLISTED
+            $registration->stato === Registration::STATUS_WAITLISTED
                 ? "Richiesta registrata in lista d'attesa."
                 : 'Iscrizione salvata con successo.',
             true,
             [
                 'registration_id' => $registration->id,
-                'status' => $registration->status,
+                'status' => $registration->stato,
                 'remaining_seats' => $event->refresh()->remaining_seats,
             ],
         );
@@ -214,7 +214,7 @@ class EventController extends Controller
 
         return ApiResponse::json('Iscrizione annullata con successo.', true, [
             'registration_id' => $registration->id,
-            'status' => $registration->status,
+            'status' => $registration->stato,
         ]);
     }
 
@@ -237,7 +237,7 @@ class EventController extends Controller
 
         return ApiResponse::json('Feedback salvato con successo.', true, [
             'feedback_id' => $feedback->id,
-            'rating' => $feedback->rating,
+            'rating' => $feedback->valutazione,
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 /**
  * @extends Factory<User>
@@ -24,16 +25,34 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'username' => fake()->unique()->userName(),
-            'first_name' => fake()->firstName(),
-            'last_name' => fake()->lastName(),
+            'nome_utente' => fake()->unique()->userName(),
+            'nome' => fake()->firstName(),
+            'cognome' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
-            'is_staff' => false,
-            'is_active' => true,
-            'is_superuser' => false,
-            'date_joined' => now(),
+            'attivo' => true,
+            'data_iscrizione' => now(),
         ];
+    }
+
+    public function admin(): static
+    {
+        return $this->withRole('admin');
+    }
+
+    public function userRole(): static
+    {
+        return $this->withRole('user');
+    }
+
+    public function withRole(string $roleName): static
+    {
+        return $this->afterCreating(function (User $user) use ($roleName): void {
+            $user->assignRole(Role::query()->firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'web',
+            ]));
+        });
     }
 
     /**

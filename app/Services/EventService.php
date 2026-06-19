@@ -15,21 +15,21 @@ use Illuminate\Validation\ValidationException;
 
 class EventService
 {
-    private const TRACKED_EVENT_NOTIFICATION_FIELDS = ['venue_name', 'venue_address', 'start_datetime', 'end_datetime'];
+    private const TRACKED_EVENT_NOTIFICATION_FIELDS = ['nome_luogo', 'indirizzo_luogo', 'inizio_il', 'fine_il'];
 
     private const TRACKED_CHANGELOG_FIELDS = [
-        'title',
-        'description',
-        'venue_name',
-        'venue_address',
-        'notes',
-        'max_participants',
-        'price',
-        'start_datetime',
-        'end_datetime',
-        'registration_deadline',
-        'event_type',
-        'status',
+        'titolo',
+        'descrizione',
+        'nome_luogo',
+        'indirizzo_luogo',
+        'note',
+        'max_partecipanti',
+        'prezzo',
+        'inizio_il',
+        'fine_il',
+        'scadenza_iscrizioni',
+        'tipo_evento',
+        'stato',
     ];
 
     public function __construct(private readonly NotificationService $notifications)
@@ -39,16 +39,16 @@ class EventService
     public function syncExpiredEventsStatuses(): void
     {
         Event::query()
-            ->whereIn('status', [Event::STATUS_PUBLISHED, Event::STATUS_CLOSED])
-            ->where('end_datetime', '<', Carbon::now())
-            ->update(['status' => Event::STATUS_COMPLETED, 'updated_at' => Carbon::now()]);
+            ->whereIn('stato', [Event::STATUS_PUBLISHED, Event::STATUS_CLOSED])
+            ->where('fine_il', '<', Carbon::now())
+            ->update(['stato' => Event::STATUS_COMPLETED, 'aggiornato_il' => Carbon::now()]);
     }
 
     public function syncEventStatus(Event $event): Event
     {
-        if (in_array($event->status, [Event::STATUS_PUBLISHED, Event::STATUS_CLOSED], true)
-            && $event->end_datetime?->lessThan(Carbon::now())) {
-            $event->forceFill(['status' => Event::STATUS_COMPLETED])->save();
+        if (in_array($event->stato, [Event::STATUS_PUBLISHED, Event::STATUS_CLOSED], true)
+            && $event->fine_il?->lessThan(Carbon::now())) {
+            $event->forceFill(['stato' => Event::STATUS_COMPLETED])->save();
         }
 
         return $event->refresh();
@@ -57,8 +57,8 @@ class EventService
     public function create(array $attributes, User $createdBy, ?array $customFields = null): Event
     {
         return DB::transaction(function () use ($attributes, $createdBy, $customFields) {
-            $attributes['notes'] = $attributes['notes'] ?? '';
-            $event = Event::query()->create(array_merge($attributes, ['created_by_id' => $createdBy->id]));
+            $attributes['note'] = $attributes['note'] ?? '';
+            $event = Event::query()->create(array_merge($attributes, ['creato_da_id' => $createdBy->id]));
             if ($customFields !== null) {
                 $this->syncCustomFieldsFromPayload($event, $customFields);
             }
@@ -70,12 +70,12 @@ class EventService
     public function update(Event $event, array $attributes, ?array $customFields = null, bool $customFieldsProvided = false, ?User $actor = null): Event
     {
         return DB::transaction(function () use ($event, $attributes, $customFields, $customFieldsProvided, $actor) {
-            $attributes['notes'] = $attributes['notes'] ?? '';
+            $attributes['note'] = $attributes['note'] ?? '';
             /** @var Event $locked */
             $locked = Event::query()->lockForUpdate()->with('registrations')->findOrFail($event->id);
             $notificationSnapshot = $this->captureNotificationSnapshot($locked);
             $changelogSnapshot = $this->captureChangelogSnapshot($locked);
-            $initialStatus = $locked->status;
+            $initialStatus = $locked->stato;
 
             if ($customFieldsProvided && ! $locked->can_configure_custom_fields) {
                 throw ValidationException::withMessages([
@@ -103,8 +103,8 @@ class EventService
             /** @var Event $locked */
             $locked = Event::query()->lockForUpdate()->findOrFail($event->id);
             Notification::query()
-                ->where('event_id', $locked->id)
-                ->orWhereIn('registration_id', Registration::query()->where('event_id', $locked->id)->select('id'))
+                ->where('evento_id', $locked->id)
+                ->orWhereIn('iscrizione_id', Registration::query()->where('evento_id', $locked->id)->select('id'))
                 ->delete();
             $locked->delete();
 
@@ -117,13 +117,13 @@ class EventService
         return DB::transaction(function () use ($event, $newStatus, $actor) {
             /** @var Event $locked */
             $locked = Event::query()->lockForUpdate()->findOrFail($event->id);
-            $initialStatus = $locked->status;
+            $initialStatus = $locked->stato;
             if ($initialStatus === $newStatus) {
                 return $locked;
             }
 
             $snapshot = $this->captureChangelogSnapshot($locked);
-            $locked->forceFill(['status' => $newStatus])->save();
+            $locked->forceFill(['stato' => $newStatus])->save();
 
             if ($newStatus === Event::STATUS_CANCELLED && $initialStatus !== Event::STATUS_CANCELLED) {
                 $this->notifyEventCancelled($locked);
@@ -257,18 +257,18 @@ class EventService
         $event->customFields()->delete();
         foreach ($configs as $config) {
             $field = EventCustomField::query()->create([
-                'event_id' => $event->id,
-                'label' => trim($config['label']),
-                'field_type' => $config['field_type'],
-                'is_required' => (bool) $config['is_required'],
-                'display_order' => (int) $config['display_order'],
+                'evento_id' => $event->id,
+                'etichetta' => trim($config['label']),
+                'tipo_campo' => $config['field_type'],
+                'obbligatorio' => (bool) $config['is_required'],
+                'ordine_visualizzazione' => (int) $config['display_order'],
             ]);
 
             foreach ($config['options'] as $index => $value) {
                 FieldOption::query()->create([
-                    'field_id' => $field->id,
-                    'value' => trim($value),
-                    'display_order' => $index + 1,
+                    'campo_id' => $field->id,
+                    'valore' => trim($value),
+                    'ordine_visualizzazione' => $index + 1,
                 ]);
             }
         }
@@ -315,15 +315,15 @@ class EventService
         }
 
         return EventChangeLog::query()->create([
-            'event_id' => $event->id,
-            'actor_id' => $actor?->id,
-            'changed_fields' => $changed,
+            'evento_id' => $event->id,
+            'autore_id' => $actor?->id,
+            'campi_modificati' => $changed,
         ]);
     }
 
     private function maybeNotifyEventChanges(Event $event, string $initialStatus, array $snapshot): void
     {
-        if ($event->status === Event::STATUS_CANCELLED) {
+        if ($event->stato === Event::STATUS_CANCELLED) {
             if ($initialStatus !== Event::STATUS_CANCELLED) {
                 $this->notifyEventCancelled($event);
             }
@@ -344,11 +344,11 @@ class EventService
 
     private function notifyEventUpdated(Event $event): void
     {
-        foreach ($event->registrations()->where('status', Registration::STATUS_ACTIVE)->with('user')->get() as $registration) {
+        foreach ($event->registrations()->where('stato', Registration::STATUS_ACTIVE)->with('user')->get() as $registration) {
             $this->notifications->create(
                 $registration->user,
                 Notification::TYPE_EVENT_UPDATED,
-                "L'evento '{$event->title}' e stato aggiornato. Controlla luogo, data e orario.",
+                "L'evento '{$event->titolo}' e stato aggiornato. Controlla luogo, data e orario.",
                 $event,
                 $registration,
             );
@@ -357,11 +357,11 @@ class EventService
 
     private function notifyEventCancelled(Event $event): void
     {
-        foreach ($event->registrations()->whereIn('status', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])->with('user')->get() as $registration) {
+        foreach ($event->registrations()->whereIn('stato', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])->with('user')->get() as $registration) {
             $this->notifications->create(
                 $registration->user,
                 Notification::TYPE_EVENT_CANCELLED,
-                "L'evento '{$event->title}' e stato annullato.",
+                "L'evento '{$event->titolo}' e stato annullato.",
                 $event,
                 $registration,
             );

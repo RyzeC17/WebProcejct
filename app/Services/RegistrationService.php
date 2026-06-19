@@ -27,22 +27,22 @@ class RegistrationService
         $this->events->syncEventStatus($event);
         $event->refresh();
 
-        if ($event->status !== Event::STATUS_PUBLISHED) {
+        if ($event->stato !== Event::STATUS_PUBLISHED) {
             throw ValidationException::withMessages(['event' => "L'evento non e aperto alle iscrizioni."]);
         }
 
-        if ($event->registration_deadline?->lessThan(Carbon::now())) {
+        if ($event->scadenza_iscrizioni?->lessThan(Carbon::now())) {
             throw ValidationException::withMessages(['event' => 'Il termine per le iscrizioni e scaduto.']);
         }
 
-        if ($event->start_datetime?->lessThanOrEqualTo(Carbon::now())) {
+        if ($event->inizio_il?->lessThanOrEqualTo(Carbon::now())) {
             throw ValidationException::withMessages(['event' => "L'evento e gia iniziato o concluso."]);
         }
 
         $alreadyRegistered = Registration::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $user->id)
-            ->whereIn('status', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])
+            ->where('evento_id', $event->id)
+            ->where('utente_id', $user->id)
+            ->whereIn('stato', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])
             ->exists();
 
         if ($alreadyRegistered) {
@@ -58,7 +58,7 @@ class RegistrationService
         foreach ($event->customFields as $field) {
             $name = 'custom_field_'.$field->id;
             $raw = $payload[$name] ?? null;
-            if ($field->is_required && ($raw === null || $raw === '')) {
+            if ($field->obbligatorio && ($raw === null || $raw === '')) {
                 throw ValidationException::withMessages([$name => 'Questo campo e obbligatorio.']);
             }
 
@@ -66,25 +66,25 @@ class RegistrationService
                 continue;
             }
 
-            if ($field->field_type === EventCustomField::TYPE_TEXT) {
-                $definitions[] = ['field' => $field, 'text_value' => trim((string) $raw)];
-            } elseif ($field->field_type === EventCustomField::TYPE_NUMBER) {
+            if ($field->tipo_campo === EventCustomField::TYPE_TEXT) {
+                $definitions[] = ['field' => $field, 'valore_testo' => trim((string) $raw)];
+            } elseif ($field->tipo_campo === EventCustomField::TYPE_NUMBER) {
                 if (! is_numeric($raw)) {
                     throw ValidationException::withMessages([$name => 'Il valore numerico non e valido.']);
                 }
-                $definitions[] = ['field' => $field, 'number_value' => $raw];
-            } elseif ($field->field_type === EventCustomField::TYPE_BOOLEAN) {
+                $definitions[] = ['field' => $field, 'valore_numero' => $raw];
+            } elseif ($field->tipo_campo === EventCustomField::TYPE_BOOLEAN) {
                 $value = filter_var($raw, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
                 if ($value === null) {
                     throw ValidationException::withMessages([$name => 'Il valore booleano non e valido.']);
                 }
-                $definitions[] = ['field' => $field, 'boolean_value' => $value];
-            } elseif ($field->field_type === EventCustomField::TYPE_SELECT) {
-                $option = FieldOption::query()->where('field_id', $field->id)->whereKey($raw)->first();
+                $definitions[] = ['field' => $field, 'valore_booleano' => $value];
+            } elseif ($field->tipo_campo === EventCustomField::TYPE_SELECT) {
+                $option = FieldOption::query()->where('campo_id', $field->id)->whereKey($raw)->first();
                 if (! $option) {
                     throw ValidationException::withMessages([$name => "L'opzione selezionata non appartiene al campo richiesto."]);
                 }
-                $definitions[] = ['field' => $field, 'selected_option' => $option];
+                $definitions[] = ['field' => $field, 'opzione_selezionata' => $option];
             }
         }
 
@@ -103,34 +103,34 @@ class RegistrationService
             $hadAvailableSeats = $locked->remaining_seats > 0;
             $targetStatus = $hadAvailableSeats ? Registration::STATUS_ACTIVE : Registration::STATUS_WAITLISTED;
             $registration = Registration::query()
-                ->where('event_id', $locked->id)
-                ->where('user_id', $user->id)
+                ->where('evento_id', $locked->id)
+                ->where('utente_id', $user->id)
                 ->lockForUpdate()
                 ->first();
 
             if ($registration) {
                 $registration->forceFill([
-                    'status' => $targetStatus,
-                    'attendee_note' => $attendeeNote,
-                    'cancelled_at' => null,
-                    'promoted_at' => null,
+                    'stato' => $targetStatus,
+                    'nota_partecipante' => $attendeeNote,
+                    'annullata_il' => null,
+                    'promossa_il' => null,
                 ])->save();
             } else {
                 $registration = Registration::query()->create([
-                    'event_id' => $locked->id,
-                    'user_id' => $user->id,
-                    'status' => $targetStatus,
-                    'attendee_note' => $attendeeNote,
+                    'evento_id' => $locked->id,
+                    'utente_id' => $user->id,
+                    'stato' => $targetStatus,
+                    'nota_partecipante' => $attendeeNote,
                 ]);
             }
 
             $this->saveCustomAnswers($registration, $customAnswers);
 
-            if ($registration->status === Registration::STATUS_ACTIVE) {
+            if ($registration->stato === Registration::STATUS_ACTIVE) {
                 $this->notifications->create(
                     $user,
                     Notification::TYPE_REGISTRATION_CONFIRMED,
-                    "La tua iscrizione all'evento '{$locked->title}' e stata confermata.",
+                    "La tua iscrizione all'evento '{$locked->titolo}' e stata confermata.",
                     $locked,
                     $registration,
                 );
@@ -138,7 +138,7 @@ class RegistrationService
                     $this->notifications->create(
                         $locked->createdBy,
                         Notification::TYPE_EVENT_FULL,
-                        "L'evento '{$locked->title}' ha esaurito i posti disponibili.",
+                        "L'evento '{$locked->titolo}' ha esaurito i posti disponibili.",
                         $locked,
                     );
                 }
@@ -150,19 +150,19 @@ class RegistrationService
 
     public function updateNote(Registration $registration, User $user, string $note): Registration
     {
-        if ($registration->user_id !== $user->id) {
+        if ($registration->utente_id !== $user->id) {
             throw new AuthorizationException('Non puoi modificare questa iscrizione.');
         }
 
-        if (! in_array($registration->status, [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED], true)) {
+        if (! in_array($registration->stato, [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED], true)) {
             throw ValidationException::withMessages(['attendee_note' => "L'iscrizione non e piu attiva."]);
         }
 
-        if ($registration->event->registration_deadline?->lessThan(Carbon::now())) {
+        if ($registration->event->scadenza_iscrizioni?->lessThan(Carbon::now())) {
             throw ValidationException::withMessages(['attendee_note' => "Non e piu possibile modificare l'iscrizione."]);
         }
 
-        $registration->forceFill(['attendee_note' => $note])->save();
+        $registration->forceFill(['nota_partecipante' => $note])->save();
 
         return $registration->refresh();
     }
@@ -172,20 +172,20 @@ class RegistrationService
         return DB::transaction(function () use ($registration, $user) {
             /** @var Registration $locked */
             $locked = Registration::query()->with('event')->lockForUpdate()->findOrFail($registration->id);
-            if ($locked->user_id !== $user->id && ! $user->is_staff) {
+            if ($locked->utente_id !== $user->id && ! $user->hasRole('admin')) {
                 throw new AuthorizationException('Non puoi annullare questa iscrizione.');
             }
-            if ($locked->status === Registration::STATUS_CANCELLED) {
+            if ($locked->stato === Registration::STATUS_CANCELLED) {
                 throw ValidationException::withMessages(['registration' => "L'iscrizione e gia annullata."]);
             }
-            if (! $user->is_staff && $locked->event->registration_deadline?->lessThan(Carbon::now())) {
+            if (! $user->hasRole('admin') && $locked->event->scadenza_iscrizioni?->lessThan(Carbon::now())) {
                 throw ValidationException::withMessages(['registration' => 'Il termine utile per annullare e scaduto.']);
             }
 
-            $shouldPromote = $locked->status === Registration::STATUS_ACTIVE;
+            $shouldPromote = $locked->stato === Registration::STATUS_ACTIVE;
             $locked->forceFill([
-                'status' => Registration::STATUS_CANCELLED,
-                'cancelled_at' => Carbon::now(),
+                'stato' => Registration::STATUS_CANCELLED,
+                'annullata_il' => Carbon::now(),
             ])->save();
 
             if ($shouldPromote) {
@@ -203,26 +203,26 @@ class RegistrationService
             /** @var EventCustomField $field */
             $field = $definition['field'];
             $payload = [
-                'text_value' => null,
-                'number_value' => null,
-                'boolean_value' => null,
-                'selected_option_id' => null,
+                'valore_testo' => null,
+                'valore_numero' => null,
+                'valore_booleano' => null,
+                'opzione_selezionata_id' => null,
             ];
 
-            if (array_key_exists('text_value', $definition)) {
-                $payload['text_value'] = $definition['text_value'];
-            } elseif (array_key_exists('number_value', $definition)) {
-                $payload['number_value'] = $definition['number_value'];
-            } elseif (array_key_exists('boolean_value', $definition)) {
-                $payload['boolean_value'] = $definition['boolean_value'];
-            } elseif (array_key_exists('selected_option', $definition)) {
-                $payload['selected_option_id'] = $definition['selected_option']->id;
+            if (array_key_exists('valore_testo', $definition)) {
+                $payload['valore_testo'] = $definition['valore_testo'];
+            } elseif (array_key_exists('valore_numero', $definition)) {
+                $payload['valore_numero'] = $definition['valore_numero'];
+            } elseif (array_key_exists('valore_booleano', $definition)) {
+                $payload['valore_booleano'] = $definition['valore_booleano'];
+            } elseif (array_key_exists('opzione_selezionata', $definition)) {
+                $payload['opzione_selezionata_id'] = $definition['opzione_selezionata']->id;
             }
 
             RegistrationCustomAnswer::query()->updateOrCreate(
                 [
-                    'registration_id' => $registration->id,
-                    'field_id' => $field->id,
+                    'iscrizione_id' => $registration->id,
+                    'campo_id' => $field->id,
                 ],
                 $payload,
             );
@@ -230,7 +230,7 @@ class RegistrationService
         }
 
         $registration->customAnswers()
-            ->when($seen !== [], fn ($query) => $query->whereNotIn('field_id', $seen))
+            ->when($seen !== [], fn ($query) => $query->whereNotIn('campo_id', $seen))
             ->when($seen === [], fn ($query) => $query)
             ->delete();
     }
@@ -245,10 +245,10 @@ class RegistrationService
 
         /** @var Registration|null $promoted */
         $promoted = Registration::query()
-            ->where('event_id', $lockedEvent->id)
-            ->where('status', Registration::STATUS_WAITLISTED)
+            ->where('evento_id', $lockedEvent->id)
+            ->where('stato', Registration::STATUS_WAITLISTED)
             ->with('user')
-            ->orderBy('created_at')
+            ->orderBy('creato_il')
             ->orderBy('id')
             ->lockForUpdate()
             ->first();
@@ -258,14 +258,14 @@ class RegistrationService
         }
 
         $promoted->forceFill([
-            'status' => Registration::STATUS_ACTIVE,
-            'promoted_at' => Carbon::now(),
+            'stato' => Registration::STATUS_ACTIVE,
+            'promossa_il' => Carbon::now(),
         ])->save();
 
         $this->notifications->create(
             $promoted->user,
             Notification::TYPE_WAITLIST_PROMOTED,
-            "Si e liberato un posto per l'evento '{$lockedEvent->title}': la tua adesione e ora confermata.",
+            "Si e liberato un posto per l'evento '{$lockedEvent->titolo}': la tua adesione e ora confermata.",
             $lockedEvent,
             $promoted,
         );

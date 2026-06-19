@@ -15,9 +15,9 @@ class NotificationController extends Controller
     public function index(Request $request, NotificationService $notifications): View
     {
         $items = Notification::query()
-            ->where('recipient_id', $request->user()->id)
+            ->where('destinatario_id', $request->user()->id)
             ->with('event', 'registration')
-            ->latest('created_at')
+            ->latest('creato_il')
             ->latest('id')
             ->paginate(20);
 
@@ -27,7 +27,7 @@ class NotificationController extends Controller
 
         return view('notifications.index', [
             'notifications' => $items,
-            'unreadCount' => Notification::query()->where('recipient_id', $request->user()->id)->where('is_read', false)->count(),
+            'unreadCount' => Notification::query()->where('destinatario_id', $request->user()->id)->where('letta', false)->count(),
         ]);
     }
 
@@ -38,9 +38,9 @@ class NotificationController extends Controller
         }
 
         $items = Notification::query()
-            ->where('recipient_id', $request->user()->id)
+            ->where('destinatario_id', $request->user()->id)
             ->with('event', 'registration')
-            ->latest('created_at')
+            ->latest('creato_il')
             ->limit(8)
             ->get();
 
@@ -50,7 +50,7 @@ class NotificationController extends Controller
 
         return view('notifications.panel', [
             'notifications' => $items,
-            'unreadCount' => Notification::query()->where('recipient_id', $request->user()->id)->where('is_read', false)->count(),
+            'unreadCount' => Notification::query()->where('destinatario_id', $request->user()->id)->where('letta', false)->count(),
         ]);
     }
 
@@ -60,11 +60,11 @@ class NotificationController extends Controller
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
 
-        $query = Notification::query()->where('recipient_id', $request->user()->id)->with('event', 'registration');
-        $latest = (clone $query)->latest('created_at')->limit(5)->get();
+        $query = Notification::query()->where('destinatario_id', $request->user()->id)->with('event', 'registration');
+        $latest = (clone $query)->latest('creato_il')->limit(5)->get();
 
         return ApiResponse::json('Riepilogo notifiche recuperato.', true, [
-            'unread_count' => (clone $query)->where('is_read', false)->count(),
+            'unread_count' => (clone $query)->where('letta', false)->count(),
             'latest' => $latest->map(fn (Notification $notification) => $notifications->serialize($notification, $request->user()))->all(),
         ]);
     }
@@ -72,13 +72,13 @@ class NotificationController extends Controller
     public function markRead(int $id, Request $request): JsonResponse
     {
         $notification = Notification::query()
-            ->where('recipient_id', $request->user()->id)
+            ->where('destinatario_id', $request->user()->id)
             ->findOrFail($id);
         $notification->markAsRead();
 
         return ApiResponse::json('Notifica segnata come letta.', true, [
             'id' => $notification->id,
-            'unread_count' => Notification::query()->where('recipient_id', $request->user()->id)->where('is_read', false)->count(),
+            'unread_count' => Notification::query()->where('destinatario_id', $request->user()->id)->where('letta', false)->count(),
         ]);
     }
 

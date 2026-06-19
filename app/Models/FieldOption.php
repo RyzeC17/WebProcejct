@@ -13,25 +13,25 @@ class FieldOption extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'field_id',
-        'value',
-        'display_order',
+        'campo_id',
+        'valore',
+        'ordine_visualizzazione',
     ];
 
     protected function casts(): array
     {
         return [
-            'display_order' => 'integer',
+            'ordine_visualizzazione' => 'integer',
         ];
     }
 
     public function field(): BelongsTo
     {
-        return $this->belongsTo(EventCustomField::class, 'field_id');
+        return $this->belongsTo(EventCustomField::class, 'campo_id');
     }
 
     public function answers(): HasMany
     {
-        return $this->hasMany(RegistrationCustomAnswer::class, 'selected_option_id');
+        return $this->hasMany(RegistrationCustomAnswer::class, 'opzione_selezionata_id');
     }
 }

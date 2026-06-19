@@ -10,7 +10,7 @@ class EventRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->is_staff;
+        return (bool) $this->user()?->hasRole('admin');
     }
 
     public function rules(): array
@@ -33,7 +33,7 @@ class EventRequest extends FormRequest
 
     public function eventAttributes(): array
     {
-        return $this->safe()->only([
+        $data = $this->safe()->only([
             'title',
             'description',
             'venue_name',
@@ -47,5 +47,20 @@ class EventRequest extends FormRequest
             'event_type',
             'status',
         ]);
+
+        return [
+            'titolo' => $data['title'],
+            'descrizione' => $data['description'],
+            'nome_luogo' => $data['venue_name'],
+            'indirizzo_luogo' => $data['venue_address'],
+            'note' => $data['notes'] ?? '',
+            'max_partecipanti' => $data['max_participants'],
+            'prezzo' => $data['price'],
+            'inizio_il' => $data['start_datetime'],
+            'fine_il' => $data['end_datetime'],
+            'scadenza_iscrizioni' => $data['registration_deadline'],
+            'tipo_evento' => $data['event_type'],
+            'stato' => $data['status'],
+        ];
     }
 }

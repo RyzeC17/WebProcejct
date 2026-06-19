@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $event->title.' | Event Hub')
+@section('title', $event->titolo.' | Event Hub')
 
 @section('content')
 <section class="py-5">
@@ -13,31 +13,31 @@
                             <span class="badge text-bg-light">{{ $event->event_type_label }}</span>
                             <span class="status-pill status-{{ $event->operational_state }}">{{ $event->operational_state_label }}</span>
                         </div>
-                        <h1 class="display-6 fw-bold">{{ $event->title }}</h1>
-                        <p class="lead text-muted">{{ $event->description }}</p>
+                        <h1 class="display-6 fw-bold">{{ $event->titolo }}</h1>
+                        <p class="lead text-muted">{{ $event->descrizione }}</p>
 
                         <div class="row g-3 event-metrics mt-1 mb-4">
-                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Posti disponibili</span><strong>{{ $event->remaining_seats }} / {{ $event->max_participants }}</strong></div></div>
-                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Costo</span><strong>{{ (float) $event->price > 0 ? 'EUR '.$event->price : 'Gratuito' }}</strong></div></div>
-                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Scadenza iscrizioni</span><strong>{{ $event->registration_deadline?->format('d/m/Y H:i') }}</strong></div></div>
+                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Posti disponibili</span><strong>{{ $event->remaining_seats }} / {{ $event->max_partecipanti }}</strong></div></div>
+                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Costo</span><strong>{{ (float) $event->prezzo > 0 ? 'EUR '.$event->prezzo : 'Gratuito' }}</strong></div></div>
+                            <div class="col-sm-4"><div class="event-metric"><span class="event-metric-label">Scadenza iscrizioni</span><strong>{{ $event->scadenza_iscrizioni?->format('d/m/Y H:i') }}</strong></div></div>
                         </div>
 
                         <dl class="row mt-4 mb-0 detail-definition">
                             <dt class="col-sm-4">Luogo</dt>
-                            <dd class="col-sm-8">{{ $event->venue_name }}<br>{!! nl2br(e($event->venue_address)) !!}</dd>
+                            <dd class="col-sm-8">{{ $event->nome_luogo }}<br>{!! nl2br(e($event->indirizzo_luogo)) !!}</dd>
                             <dt class="col-sm-4">Inizio</dt>
-                            <dd class="col-sm-8">{{ $event->start_datetime?->format('d/m/Y H:i') }}</dd>
+                            <dd class="col-sm-8">{{ $event->inizio_il?->format('d/m/Y H:i') }}</dd>
                             <dt class="col-sm-4">Fine</dt>
-                            <dd class="col-sm-8">{{ $event->end_datetime?->format('d/m/Y H:i') }}</dd>
-                            @if ($event->notes)
+                            <dd class="col-sm-8">{{ $event->fine_il?->format('d/m/Y H:i') }}</dd>
+                            @if ($event->note)
                                 <dt class="col-sm-4">Note</dt>
-                                <dd class="col-sm-8">{!! nl2br(e($event->notes)) !!}</dd>
+                                <dd class="col-sm-8">{!! nl2br(e($event->note)) !!}</dd>
                             @endif
                         </dl>
                     </div>
                 </article>
 
-                @if ($event->status === 'completed' && isset($feedbackSummary))
+                @if ($event->stato === 'completed' && isset($feedbackSummary))
                     <div class="card border-0 shadow-soft mt-4 feedback-section" id="feedback-section">
                         <div class="card-body p-4 p-lg-5">
                             <h2 class="h4 fw-bold mb-4">Feedback dei partecipanti</h2>
@@ -76,13 +76,13 @@
                                                 <label class="form-label" for="rating">Voto</label>
                                                 <select class="form-select" id="rating" name="rating" required>
                                                     @for ($i = 1; $i <= 5; $i++)
-                                                        <option value="{{ $i }}" @selected((int) old('rating', $userFeedback?->rating ?? 5) === $i)>{{ $i }} {{ $i === 1 ? 'stella' : 'stelle' }}</option>
+                                                        <option value="{{ $i }}" @selected((int) old('rating', $userFeedback?->valutazione ?? 5) === $i)>{{ $i }} {{ $i === 1 ? 'stella' : 'stelle' }}</option>
                                                     @endfor
                                                 </select>
                                             </div>
                                             <div class="form-group sidebar-form-group mt-3">
                                                 <label class="form-label" for="comment">Commento</label>
-                                                <textarea class="form-control" id="comment" name="comment" rows="3" maxlength="1000" placeholder="Lascia un commento (facoltativo)">{{ old('comment', $userFeedback?->comment) }}</textarea>
+                                                <textarea class="form-control" id="comment" name="comment" rows="3" maxlength="1000" placeholder="Lascia un commento (facoltativo)">{{ old('comment', $userFeedback?->commento) }}</textarea>
                                             </div>
                                             <button class="btn btn-dark mt-3" type="submit" data-loading-label="Invio...">Invia feedback</button>
                                         </form>
@@ -97,14 +97,14 @@
                                         <div class="feedback-item mb-3 pb-3 {{ $loop->last ? '' : 'border-bottom' }}">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <strong class="small">{{ $fb->user->display_name }}</strong>
-                                                <span class="small text-muted">{{ $fb->created_at?->format('d/m/Y H:i') }}</span>
+                                                <span class="small text-muted">{{ $fb->creato_il?->format('d/m/Y H:i') }}</span>
                                             </div>
                                             <div class="feedback-stars mb-1">
                                                 @for ($i = 1; $i <= 5; $i++)
-                                                    <span class="{{ $i <= $fb->rating ? 'star-filled' : 'star-empty' }}">{{ $i <= $fb->rating ? '*' : '-' }}</span>
+                                                    <span class="{{ $i <= $fb->valutazione ? 'star-filled' : 'star-empty' }}">{{ $i <= $fb->valutazione ? '*' : '-' }}</span>
                                                 @endfor
                                             </div>
-                                            @if ($fb->comment)<p class="small text-muted mb-0">{{ $fb->comment }}</p>@endif
+                                            @if ($fb->commento)<p class="small text-muted mb-0">{{ $fb->commento }}</p>@endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -118,7 +118,7 @@
                 <div class="card border-0 shadow-soft event-side-panel">
                     <div class="card-body p-4">
                         <p class="small text-uppercase fw-semibold text-muted mb-2">Azioni rapide</p>
-                        @if ($event->status === 'completed')
+                        @if ($event->stato === 'completed')
                             <h2 class="h4">Evento completato</h2>
                             <div class="alert alert-secondary app-alert mb-0">Questo evento si e concluso.</div>
                         @else
@@ -129,10 +129,10 @@
                             @else
                                 <div class="sidebar-form-stack" data-feedback-context>
                                     <div id="event-action-feedback" class="ajax-feedback small mb-3" aria-live="polite"></div>
-                                    @if ($registration && $registration->status === 'active')
+                                    @if ($registration && $registration->stato === 'active')
                                         <div class="alert alert-success app-alert">Risulti iscritto a questo evento.</div>
                                         @include('events.partials.registration_actions', ['registration' => $registration, 'cancelLabel' => 'Annulla adesione'])
-                                    @elseif ($registration && $registration->status === 'waitlisted')
+                                    @elseif ($registration && $registration->stato === 'waitlisted')
                                         <div class="alert alert-info app-alert">Sei in lista d'attesa per questo evento.</div>
                                         @include('events.partials.registration_actions', ['registration' => $registration, 'cancelLabel' => "Rinuncia alla lista d'attesa"])
                                     @elseif ($event->accepts_new_requests)
@@ -144,22 +144,22 @@
                                             </div>
                                             @foreach ($event->customFields as $field)
                                                 <div class="form-group sidebar-form-group mt-3">
-                                                    <label class="form-label" for="custom_field_{{ $field->id }}">{{ $field->label }}</label>
-                                                    @if ($field->field_type === 'text')
-                                                        <input class="form-control" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" type="text" maxlength="255" @required($field->is_required)>
-                                                    @elseif ($field->field_type === 'number')
-                                                        <input class="form-control" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" type="number" step="any" @required($field->is_required)>
-                                                    @elseif ($field->field_type === 'boolean')
-                                                        <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" @required($field->is_required)>
+                                                    <label class="form-label" for="custom_field_{{ $field->id }}">{{ $field->etichetta }}</label>
+                                                    @if ($field->tipo_campo === 'text')
+                                                        <input class="form-control" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" type="text" maxlength="255" @required($field->obbligatorio)>
+                                                    @elseif ($field->tipo_campo === 'number')
+                                                        <input class="form-control" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" type="number" step="any" @required($field->obbligatorio)>
+                                                    @elseif ($field->tipo_campo === 'boolean')
+                                                        <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" @required($field->obbligatorio)>
                                                             <option value="">Seleziona</option>
                                                             <option value="true">Si</option>
                                                             <option value="false">No</option>
                                                         </select>
                                                     @else
-                                                        <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" @required($field->is_required)>
+                                                        <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_field_{{ $field->id }}" @required($field->obbligatorio)>
                                                             <option value="">Seleziona</option>
                                                             @foreach ($field->options as $option)
-                                                                <option value="{{ $option->id }}">{{ $option->value }}</option>
+                                                                <option value="{{ $option->id }}">{{ $option->valore }}</option>
                                                             @endforeach
                                                         </select>
                                                     @endif

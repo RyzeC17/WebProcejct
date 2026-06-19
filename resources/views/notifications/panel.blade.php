@@ -14,13 +14,13 @@
 
     <div class="notification-feed">
         @forelse ($notifications as $notification)
-            <article class="notification-item {{ $notification->is_read ? '' : 'is-unread' }}" data-notification-item data-notification-id="{{ $notification->id }}">
+            <article class="notification-item {{ $notification->letta ? '' : 'is-unread' }}" data-notification-item data-notification-id="{{ $notification->id }}">
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
-                        <p class="mb-1">{{ $notification->text }}</p>
-                        <div class="small text-muted">{{ $notification->created_at?->format('d/m/Y H:i') }}</div>
+                        <p class="mb-1">{{ $notification->testo }}</p>
+                        <div class="small text-muted">{{ $notification->creato_il?->format('d/m/Y H:i') }}</div>
                     </div>
-                    <button class="btn btn-outline-dark btn-sm" type="button" data-notification-mark-read-url="{{ route('notifications.mark-read', $notification->id) }}" @disabled($notification->is_read)>
+                    <button class="btn btn-outline-dark btn-sm" type="button" data-notification-mark-read-url="{{ route('notifications.mark-read', $notification->id) }}" @disabled($notification->letta)>
                         Letta
                     </button>
                 </div>

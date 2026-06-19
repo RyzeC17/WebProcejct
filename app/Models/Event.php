@@ -50,31 +50,34 @@ class Event extends Model
 
     protected $table = 'eventi';
 
+    public const CREATED_AT = 'creato_il';
+    public const UPDATED_AT = 'aggiornato_il';
+
     protected $fillable = [
-        'title',
+        'titolo',
         'slug',
-        'description',
-        'venue_name',
-        'venue_address',
-        'notes',
-        'max_participants',
-        'price',
-        'start_datetime',
-        'end_datetime',
-        'registration_deadline',
-        'event_type',
-        'status',
-        'created_by_id',
+        'descrizione',
+        'nome_luogo',
+        'indirizzo_luogo',
+        'note',
+        'max_partecipanti',
+        'prezzo',
+        'inizio_il',
+        'fine_il',
+        'scadenza_iscrizioni',
+        'tipo_evento',
+        'stato',
+        'creato_da_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
-            'max_participants' => 'integer',
-            'start_datetime' => 'datetime',
-            'end_datetime' => 'datetime',
-            'registration_deadline' => 'datetime',
+            'prezzo' => 'decimal:2',
+            'max_partecipanti' => 'integer',
+            'inizio_il' => 'datetime',
+            'fine_il' => 'datetime',
+            'scadenza_iscrizioni' => 'datetime',
         ];
     }
 
@@ -89,7 +92,7 @@ class Event extends Model
 
     public static function buildUniqueSlug(Event $event): string
     {
-        $base = Str::slug(Str::limit($event->title ?: 'evento', 45, '')) ?: 'evento';
+        $base = Str::slug(Str::limit($event->titolo ?: 'evento', 45, '')) ?: 'evento';
         $slug = $base;
         $index = 1;
 
@@ -106,22 +109,22 @@ class Event extends Model
 
     public function scopePublicVisible(Builder $query): Builder
     {
-        return $query->whereIn('status', [self::STATUS_PUBLISHED, self::STATUS_COMPLETED]);
+        return $query->whereIn('stato', [self::STATUS_PUBLISHED, self::STATUS_COMPLETED]);
     }
 
     public function scopeWithRegistrationCounts(Builder $query): Builder
     {
         return $query->withCount([
-            'registrations as active_registrations_count' => fn (Builder $query) => $query->where('status', Registration::STATUS_ACTIVE),
-            'registrations as waitlisted_registrations_count' => fn (Builder $query) => $query->where('status', Registration::STATUS_WAITLISTED),
+            'registrations as active_registrations_count' => fn (Builder $query) => $query->where('stato', Registration::STATUS_ACTIVE),
+            'registrations as waitlisted_registrations_count' => fn (Builder $query) => $query->where('stato', Registration::STATUS_WAITLISTED),
         ]);
     }
 
     public function loadRegistrationCounts(): self
     {
         $this->loadCount([
-            'registrations as active_registrations_count' => fn (Builder $query) => $query->where('status', Registration::STATUS_ACTIVE),
-            'registrations as waitlisted_registrations_count' => fn (Builder $query) => $query->where('status', Registration::STATUS_WAITLISTED),
+            'registrations as active_registrations_count' => fn (Builder $query) => $query->where('stato', Registration::STATUS_ACTIVE),
+            'registrations as waitlisted_registrations_count' => fn (Builder $query) => $query->where('stato', Registration::STATUS_WAITLISTED),
         ]);
 
         return $this;
@@ -129,42 +132,42 @@ class Event extends Model
 
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by_id');
+        return $this->belongsTo(User::class, 'creato_da_id');
     }
 
     public function registrations(): HasMany
     {
-        return $this->hasMany(Registration::class, 'event_id');
+        return $this->hasMany(Registration::class, 'evento_id');
     }
 
     public function customFields(): HasMany
     {
-        return $this->hasMany(EventCustomField::class, 'event_id')->orderBy('display_order')->orderBy('id');
+        return $this->hasMany(EventCustomField::class, 'evento_id')->orderBy('ordine_visualizzazione')->orderBy('id');
     }
 
     public function changeLogs(): HasMany
     {
-        return $this->hasMany(EventChangeLog::class, 'event_id')->latest('created_at')->latest('id');
+        return $this->hasMany(EventChangeLog::class, 'evento_id')->latest('creato_il')->latest('id');
     }
 
     public function feedbacks(): HasMany
     {
-        return $this->hasMany(EventFeedback::class, 'event_id')->latest('created_at');
+        return $this->hasMany(EventFeedback::class, 'evento_id')->latest('creato_il');
     }
 
     public function notifications(): HasMany
     {
-        return $this->hasMany(Notification::class, 'event_id');
+        return $this->hasMany(Notification::class, 'evento_id');
     }
 
     public function getEventTypeLabelAttribute(): string
     {
-        return self::EVENT_TYPES[$this->event_type] ?? $this->event_type;
+        return self::EVENT_TYPES[$this->tipo_evento] ?? $this->tipo_evento;
     }
 
     public function getStatusLabelAttribute(): string
     {
-        return self::STATUSES[$this->status] ?? $this->status;
+        return self::STATUSES[$this->stato] ?? $this->stato;
     }
 
     public function getActiveRegistrationsCountAttribute(): int
@@ -173,7 +176,7 @@ class Event extends Model
             return (int) $this->attributes['active_registrations_count'];
         }
 
-        return (int) $this->registrations()->where('status', Registration::STATUS_ACTIVE)->count();
+        return (int) $this->registrations()->where('stato', Registration::STATUS_ACTIVE)->count();
     }
 
     public function getWaitlistedRegistrationsCountAttribute(): int
@@ -182,21 +185,21 @@ class Event extends Model
             return (int) $this->attributes['waitlisted_registrations_count'];
         }
 
-        return (int) $this->registrations()->where('status', Registration::STATUS_WAITLISTED)->count();
+        return (int) $this->registrations()->where('stato', Registration::STATUS_WAITLISTED)->count();
     }
 
     public function getRemainingSeatsAttribute(): int
     {
-        return max((int) $this->max_participants - $this->active_registrations_count, 0);
+        return max((int) $this->max_partecipanti - $this->active_registrations_count, 0);
     }
 
     public function getAcceptsNewRequestsAttribute(): bool
     {
         $now = Carbon::now();
 
-        return $this->status === self::STATUS_PUBLISHED
-            && $this->registration_deadline?->greaterThanOrEqualTo($now)
-            && $this->start_datetime?->greaterThan($now);
+        return $this->stato === self::STATUS_PUBLISHED
+            && $this->scadenza_iscrizioni?->greaterThanOrEqualTo($now)
+            && $this->inizio_il?->greaterThan($now);
     }
 
     public function getIsRegistrationOpenAttribute(): bool
@@ -206,13 +209,13 @@ class Event extends Model
 
     public function getCanConfigureCustomFieldsAttribute(): bool
     {
-        if ($this->status === self::STATUS_DRAFT) {
+        if ($this->stato === self::STATUS_DRAFT) {
             return true;
         }
 
-        if ($this->status === self::STATUS_PUBLISHED) {
+        if ($this->stato === self::STATUS_PUBLISHED) {
             return ! $this->registrations()
-                ->whereIn('status', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])
+                ->whereIn('stato', [Registration::STATUS_ACTIVE, Registration::STATUS_WAITLISTED])
                 ->exists();
         }
 
@@ -223,15 +226,15 @@ class Event extends Model
     {
         $now = Carbon::now();
 
-        if ($this->status === self::STATUS_CANCELLED) {
+        if ($this->stato === self::STATUS_CANCELLED) {
             return 'cancelled';
         }
 
-        if ($this->status === self::STATUS_COMPLETED || $this->end_datetime?->lessThan($now)) {
+        if ($this->stato === self::STATUS_COMPLETED || $this->fine_il?->lessThan($now)) {
             return 'completed';
         }
 
-        if ($this->start_datetime?->lessThanOrEqualTo($now) && $this->end_datetime?->greaterThanOrEqualTo($now)) {
+        if ($this->inizio_il?->lessThanOrEqualTo($now) && $this->fine_il?->greaterThanOrEqualTo($now)) {
             return 'ongoing';
         }
 
@@ -239,7 +242,7 @@ class Event extends Model
             return 'full';
         }
 
-        if ($this->registration_deadline?->lessThan($now) || $this->status === self::STATUS_CLOSED) {
+        if ($this->scadenza_iscrizioni?->lessThan($now) || $this->stato === self::STATUS_CLOSED) {
             return 'registration_expired';
         }
 

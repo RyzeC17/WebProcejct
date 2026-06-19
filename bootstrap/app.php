@@ -27,11 +27,35 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'staff' => \App\Http\Middleware\StaffMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $exception, Request $request) {
+            if ($exception instanceof TokenMismatchException) {
+                if (! $request->is('api/*') && ! $request->expectsJson()) {
+                    return redirect()
+                        ->back()
+                        ->withInput($request->except(['_token', 'password', 'password_confirmation']))
+                        ->with('error', 'Sessione scaduta. Ricarica la pagina e riprova.');
+                }
+
+                return \App\Services\ApiResponse::json('Token CSRF non valido o sessione scaduta.', false, [], [], 419);
+            }
+
+            if ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() === 419) {
+                if (! $request->is('api/*') && ! $request->expectsJson()) {
+                    return redirect()
+                        ->back()
+                        ->withInput($request->except(['_token', 'password', 'password_confirmation']))
+                        ->with('error', 'Sessione scaduta. Ricarica la pagina e riprova.');
+                }
+
+                return \App\Services\ApiResponse::json('Token CSRF non valido o sessione scaduta.', false, [], [], 419);
+            }
+
             if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null;
             }
@@ -52,10 +76,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($exception instanceof AuthorizationException) {
                 return \App\Services\ApiResponse::json($exception->getMessage() ?: 'Permessi insufficienti.', false, [], [], 403);
-            }
-
-            if ($exception instanceof TokenMismatchException) {
-                return \App\Services\ApiResponse::json('Token CSRF non valido o sessione scaduta.', false, [], [], 419);
             }
 
             if ($exception instanceof ModelNotFoundException || $exception instanceof NotFoundHttpException) {

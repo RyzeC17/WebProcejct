@@ -9,33 +9,36 @@ class EventFeedback extends Model
 {
     protected $table = 'feedback_evento';
 
+    public const CREATED_AT = 'creato_il';
+    public const UPDATED_AT = 'aggiornato_il';
+
     protected $fillable = [
-        'event_id',
-        'user_id',
-        'registration_id',
-        'rating',
-        'comment',
+        'evento_id',
+        'utente_id',
+        'iscrizione_id',
+        'valutazione',
+        'commento',
     ];
 
     protected function casts(): array
     {
         return [
-            'rating' => 'integer',
+            'valutazione' => 'integer',
         ];
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Event::class, 'evento_id');
     }
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'utente_id');
     }
 
     public function registration(): BelongsTo
     {
-        return $this->belongsTo(Registration::class, 'registration_id');
+        return $this->belongsTo(Registration::class, 'iscrizione_id');
     }
 }

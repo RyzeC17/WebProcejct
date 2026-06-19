@@ -20,55 +20,58 @@ class Registration extends Model
 
     protected $table = 'iscrizioni';
 
+    public const CREATED_AT = 'creato_il';
+    public const UPDATED_AT = 'aggiornato_il';
+
     protected $fillable = [
-        'event_id',
-        'user_id',
-        'status',
-        'attendee_note',
-        'cancelled_at',
-        'promoted_at',
+        'evento_id',
+        'utente_id',
+        'stato',
+        'nota_partecipante',
+        'annullata_il',
+        'promossa_il',
     ];
 
     protected function casts(): array
     {
         return [
-            'cancelled_at' => 'datetime',
-            'promoted_at' => 'datetime',
+            'annullata_il' => 'datetime',
+            'promossa_il' => 'datetime',
         ];
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Event::class, 'evento_id');
     }
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'utente_id');
     }
 
     public function customAnswers(): HasMany
     {
-        return $this->hasMany(RegistrationCustomAnswer::class, 'registration_id');
+        return $this->hasMany(RegistrationCustomAnswer::class, 'iscrizione_id');
     }
 
     public function notifications(): HasMany
     {
-        return $this->hasMany(Notification::class, 'registration_id');
+        return $this->hasMany(Notification::class, 'iscrizione_id');
     }
 
     public function feedbacks(): HasMany
     {
-        return $this->hasMany(EventFeedback::class, 'registration_id');
+        return $this->hasMany(EventFeedback::class, 'iscrizione_id');
     }
 
     public function getStatusLabelAttribute(): string
     {
-        return self::STATUSES[$this->status] ?? $this->status;
+        return self::STATUSES[$this->stato] ?? $this->stato;
     }
 
     public function getIsConfirmedAttribute(): bool
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return $this->stato === self::STATUS_ACTIVE;
     }
 }

@@ -9,30 +9,31 @@ class EventChangeLog extends Model
 {
     protected $table = 'modifiche_evento';
 
+    public const CREATED_AT = 'creato_il';
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'event_id',
-        'actor_id',
-        'changed_fields',
-        'created_at',
+        'evento_id',
+        'autore_id',
+        'campi_modificati',
+        'creato_il',
     ];
 
     protected function casts(): array
     {
         return [
-            'changed_fields' => 'array',
-            'created_at' => 'datetime',
+            'campi_modificati' => 'array',
+            'creato_il' => 'datetime',
         ];
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Event::class, 'evento_id');
     }
 
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->belongsTo(User::class, 'autore_id');
     }
 }

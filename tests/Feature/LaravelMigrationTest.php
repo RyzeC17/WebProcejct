@@ -37,10 +37,25 @@ class LaravelMigrationTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_user_can_login_with_email(): void
+    {
+        User::factory()->create([
+            'email' => 'grace@example.com',
+            'nome_utente' => 'grace',
+        ]);
+
+        $this->post('/account/login/', [
+            'username' => 'grace@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/eventi');
+
+        $this->assertAuthenticated();
+    }
+
     public function test_public_event_api_keeps_response_shape(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
-        $event = $this->event($staff, ['status' => Event::STATUS_PUBLISHED]);
+        $admin = User::factory()->admin()->create();
+        $event = $this->event($admin, ['status' => Event::STATUS_PUBLISHED]);
 
         $this->getJson('/api/v1/events/')
             ->assertOk()
@@ -62,9 +77,9 @@ class LaravelMigrationTest extends TestCase
             ->assertJsonStructure(['success', 'message', 'data', 'errors']);
     }
 
-    public function test_api_staff_routes_reject_non_staff_users(): void
+    public function test_api_admin_routes_reject_regular_users(): void
     {
-        $user = User::factory()->create(['is_staff' => false]);
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->postJson('/api/v1/events/', [])
@@ -81,9 +96,9 @@ class LaravelMigrationTest extends TestCase
 
     public function test_created_notifications_are_unread_by_default(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
-        $event = $this->event($staff);
+        $event = $this->event($admin);
 
         $notification = app(NotificationService::class)->create(
             $user,
@@ -92,14 +107,14 @@ class LaravelMigrationTest extends TestCase
             $event,
         );
 
-        $this->assertFalse($notification->is_read);
-        $this->assertDatabaseHas('notifiche', ['id' => $notification->id, 'is_read' => 0]);
+        $this->assertFalse($notification->letta);
+        $this->assertDatabaseHas('notifiche', ['id' => $notification->id, 'letta' => 0]);
     }
 
     public function test_registration_uses_active_then_waitlist_flow(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
-        $event = $this->event($staff, ['max_participants' => 1, 'status' => Event::STATUS_PUBLISHED]);
+        $admin = User::factory()->admin()->create();
+        $event = $this->event($admin, ['max_participants' => 1, 'status' => Event::STATUS_PUBLISHED]);
         $first = User::factory()->create();
         $second = User::factory()->create();
 
@@ -118,19 +133,19 @@ class LaravelMigrationTest extends TestCase
 
     public function test_feedback_rating_is_validated(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
-        $event = $this->event($staff, [
+        $event = $this->event($admin, [
             'status' => Event::STATUS_COMPLETED,
             'start_datetime' => now()->subDays(2),
             'end_datetime' => now()->subDay(),
             'registration_deadline' => now()->subDays(3),
         ]);
         Registration::query()->create([
-            'event_id' => $event->id,
-            'user_id' => $user->id,
-            'status' => Registration::STATUS_ACTIVE,
-            'attendee_note' => '',
+            'evento_id' => $event->id,
+            'utente_id' => $user->id,
+            'stato' => Registration::STATUS_ACTIVE,
+            'nota_partecipante' => '',
         ]);
 
         $this->actingAs($user)
@@ -139,11 +154,11 @@ class LaravelMigrationTest extends TestCase
             ->assertJsonPath('success', false);
     }
 
-    public function test_staff_can_create_event_from_backoffice(): void
+    public function test_admin_can_create_event_from_backoffice(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
+        $admin = User::factory()->admin()->create();
 
-        $this->actingAs($staff)->post('/eventi/gestione/eventi/nuovo/', [
+        $this->actingAs($admin)->post('/eventi/gestione/eventi/nuovo/', [
             'title' => 'Nuovo laboratorio',
             'description' => 'Descrizione evento',
             'venue_name' => 'Aula magna',
@@ -167,16 +182,16 @@ class LaravelMigrationTest extends TestCase
             ],
         ])->assertRedirect('/eventi/gestione/eventi');
 
-        $this->assertDatabaseHas('eventi', ['title' => 'Nuovo laboratorio', 'status' => Event::STATUS_PUBLISHED]);
-        $this->assertDatabaseHas('campi_evento', ['label' => 'Taglia maglietta']);
-        $this->assertDatabaseHas('opzioni_campo', ['value' => 'M']);
+        $this->assertDatabaseHas('eventi', ['titolo' => 'Nuovo laboratorio', 'stato' => Event::STATUS_PUBLISHED]);
+        $this->assertDatabaseHas('campi_evento', ['etichetta' => 'Taglia maglietta']);
+        $this->assertDatabaseHas('opzioni_campo', ['valore' => 'M']);
     }
 
-    public function test_staff_can_create_event_without_custom_fields(): void
+    public function test_admin_can_create_event_without_custom_fields(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
+        $admin = User::factory()->admin()->create();
 
-        $this->actingAs($staff)->post('/eventi/gestione/eventi/nuovo/', [
+        $this->actingAs($admin)->post('/eventi/gestione/eventi/nuovo/', [
             'title' => 'Evento senza campi custom',
             'description' => 'Descrizione evento',
             'venue_name' => 'Sala civica',
@@ -200,25 +215,25 @@ class LaravelMigrationTest extends TestCase
             ],
         ])->assertRedirect('/eventi/gestione/eventi');
 
-        $event = Event::query()->where('title', 'Evento senza campi custom')->firstOrFail();
+        $event = Event::query()->where('titolo', 'Evento senza campi custom')->firstOrFail();
         $this->assertSame(0, $event->customFields()->count());
     }
 
     public function test_deadline_reminders_are_scheduled_and_idempotent(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
-        $event = $this->event($staff, [
+        $event = $this->event($admin, [
             'status' => Event::STATUS_PUBLISHED,
             'start_datetime' => now()->addDays(2),
             'end_datetime' => now()->addDays(2)->addHours(2),
             'registration_deadline' => now()->addHours(12),
         ]);
         Registration::query()->create([
-            'event_id' => $event->id,
-            'user_id' => $user->id,
-            'status' => Registration::STATUS_ACTIVE,
-            'attendee_note' => '',
+            'evento_id' => $event->id,
+            'utente_id' => $user->id,
+            'stato' => Registration::STATUS_ACTIVE,
+            'nota_partecipante' => '',
         ]);
 
         Artisan::call('schedule:list');
@@ -228,23 +243,23 @@ class LaravelMigrationTest extends TestCase
         $this->assertSame(1, $service->sendDeadlineReminders());
         $this->assertSame(0, $service->sendDeadlineReminders());
         $this->assertSame(1, Notification::query()
-            ->where('notification_type', Notification::TYPE_REGISTRATION_DEADLINE_REMINDER)
-            ->where('event_id', $event->id)
-            ->where('recipient_id', $user->id)
+            ->where('tipo_notifica', Notification::TYPE_REGISTRATION_DEADLINE_REMINDER)
+            ->where('evento_id', $event->id)
+            ->where('destinatario_id', $user->id)
             ->count());
     }
 
     public function test_event_registration_counts_can_be_preloaded(): void
     {
-        $staff = User::factory()->create(['is_staff' => true]);
-        $event = $this->event($staff, ['max_participants' => 2]);
+        $admin = User::factory()->admin()->create();
+        $event = $this->event($admin, ['max_participants' => 2]);
         $activeUser = User::factory()->create();
         $waitlistedUser = User::factory()->create();
         $cancelledUser = User::factory()->create();
 
-        Registration::query()->create(['event_id' => $event->id, 'user_id' => $activeUser->id, 'status' => Registration::STATUS_ACTIVE, 'attendee_note' => '']);
-        Registration::query()->create(['event_id' => $event->id, 'user_id' => $waitlistedUser->id, 'status' => Registration::STATUS_WAITLISTED, 'attendee_note' => '']);
-        Registration::query()->create(['event_id' => $event->id, 'user_id' => $cancelledUser->id, 'status' => Registration::STATUS_CANCELLED, 'attendee_note' => '']);
+        Registration::query()->create(['evento_id' => $event->id, 'utente_id' => $activeUser->id, 'stato' => Registration::STATUS_ACTIVE, 'nota_partecipante' => '']);
+        Registration::query()->create(['evento_id' => $event->id, 'utente_id' => $waitlistedUser->id, 'stato' => Registration::STATUS_WAITLISTED, 'nota_partecipante' => '']);
+        Registration::query()->create(['evento_id' => $event->id, 'utente_id' => $cancelledUser->id, 'stato' => Registration::STATUS_CANCELLED, 'nota_partecipante' => '']);
 
         $loaded = Event::query()->withRegistrationCounts()->findOrFail($event->id);
 
@@ -253,22 +268,50 @@ class LaravelMigrationTest extends TestCase
         $this->assertSame(1, $loaded->remaining_seats);
     }
 
-    private function event(User $staff, array $attributes = []): Event
+    private function event(User $admin, array $attributes = []): Event
     {
         return Event::query()->create(array_merge([
-            'title' => 'Evento di test',
-            'description' => 'Descrizione di test',
-            'venue_name' => 'Sala civica',
-            'venue_address' => 'Piazza Centrale 1',
-            'notes' => '',
-            'max_participants' => 10,
-            'price' => 0,
-            'start_datetime' => now()->addWeeks(2),
-            'end_datetime' => now()->addWeeks(2)->addHours(2),
-            'registration_deadline' => now()->addWeek(),
-            'event_type' => Event::TYPE_SOCIALE,
-            'status' => Event::STATUS_PUBLISHED,
-            'created_by_id' => $staff->id,
-        ], $attributes));
+            'titolo' => 'Evento di test',
+            'descrizione' => 'Descrizione di test',
+            'nome_luogo' => 'Sala civica',
+            'indirizzo_luogo' => 'Piazza Centrale 1',
+            'note' => '',
+            'max_partecipanti' => 10,
+            'prezzo' => 0,
+            'inizio_il' => now()->addWeeks(2),
+            'fine_il' => now()->addWeeks(2)->addHours(2),
+            'scadenza_iscrizioni' => now()->addWeek(),
+            'tipo_evento' => Event::TYPE_SOCIALE,
+            'stato' => Event::STATUS_PUBLISHED,
+            'creato_da_id' => $admin->id,
+        ], $this->eventColumns($attributes)));
+    }
+
+    private function eventColumns(array $attributes): array
+    {
+        $map = [
+            'title' => 'titolo',
+            'description' => 'descrizione',
+            'venue_name' => 'nome_luogo',
+            'venue_address' => 'indirizzo_luogo',
+            'notes' => 'note',
+            'max_participants' => 'max_partecipanti',
+            'price' => 'prezzo',
+            'start_datetime' => 'inizio_il',
+            'end_datetime' => 'fine_il',
+            'registration_deadline' => 'scadenza_iscrizioni',
+            'event_type' => 'tipo_evento',
+            'status' => 'stato',
+            'created_by_id' => 'creato_da_id',
+        ];
+
+        foreach ($map as $english => $italian) {
+            if (array_key_exists($english, $attributes)) {
+                $attributes[$italian] = $attributes[$english];
+                unset($attributes[$english]);
+            }
+        }
+
+        return $attributes;
     }
 }

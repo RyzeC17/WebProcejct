@@ -51,13 +51,13 @@
                 <tbody>
                     @forelse ($events as $event)
                         <tr>
-                            <td data-label="Titolo"><strong>{{ $event->title }}</strong><div class="small text-muted">{{ $event->venue_name }}</div></td>
-                            <td data-label="Data">{{ $event->start_datetime?->format('d/m/Y H:i') }}</td>
+                            <td data-label="Titolo"><strong>{{ $event->titolo }}</strong><div class="small text-muted">{{ $event->nome_luogo }}</div></td>
+                            <td data-label="Data">{{ $event->inizio_il?->format('d/m/Y H:i') }}</td>
                             <td data-label="Tipologia">{{ $event->event_type_label }}</td>
                             <td data-label="Stato">
                                 <select class="form-select form-select-sm" data-status-select data-url="{{ route('events.manage-status', $event->id) }}">
                                     @foreach ($statusChoices as $value => $label)
-                                        <option value="{{ $value }}" @selected($event->status === $value)>{{ $label }}</option>
+                                        <option value="{{ $value }}" @selected($event->stato === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </td>

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Storico modifiche - '.$event->title.' | Event Hub')
+@section('title', 'Storico modifiche - '.$event->titolo.' | Event Hub')
 
 @section('content')
 <section class="py-5">
@@ -9,7 +9,7 @@
             <div>
                 <span class="eyebrow">Backoffice amministratore</span>
                 <h1 class="display-6 fw-bold mb-1">Storico modifiche</h1>
-                <p class="text-muted mb-0">{{ $event->title }}</p>
+                <p class="text-muted mb-0">{{ $event->titolo }}</p>
             </div>
             <a class="btn btn-outline-dark" href="{{ route('events.manage-update', $event->id) }}">Torna alla modifica</a>
         </div>
@@ -17,7 +17,7 @@
         @if ($changeLogs->isNotEmpty())
             <div class="table-responsive shadow-soft overflow-hidden table-card">
                 <table class="table align-middle mb-0 bg-white app-table" data-table-responsive>
-                    <caption class="visually-hidden">Tabella storico modifiche dell'evento {{ $event->title }}</caption>
+                    <caption class="visually-hidden">Tabella storico modifiche dell'evento {{ $event->titolo }}</caption>
                     <thead class="table-light">
                         <tr>
                             <th scope="col">Data</th>
@@ -28,10 +28,10 @@
                     <tbody>
                         @foreach ($changeLogs as $log)
                             <tr>
-                                <td data-label="Data">{{ $log->created_at?->format('d/m/Y H:i') }}</td>
+                                <td data-label="Data">{{ $log->creato_il?->format('d/m/Y H:i') }}</td>
                                 <td data-label="Attore">{{ $log->actor?->display_name ?? 'Sistema' }}</td>
                                 <td data-label="Campi modificati">
-                                    @foreach ($log->changed_fields ?? [] as $fieldName => $values)
+                                    @foreach ($log->campi_modificati ?? [] as $fieldName => $values)
                                         <div class="changelog-field mb-2">
                                             <strong class="changelog-field-label">{{ $fieldName }}</strong>
                                             <div class="d-flex flex-wrap gap-2 align-items-center small">

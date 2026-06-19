@@ -10,7 +10,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/{eventId}/', [EventApiController::class, 'show']);
     Route::get('/events/{eventId}/feedback/', [EventApiController::class, 'feedback']);
 
-    Route::middleware(['auth', 'staff'])->group(function () {
+    Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/events/', [EventApiController::class, 'store']);
         Route::patch('/events/{eventId}/', [EventApiController::class, 'update']);
         Route::delete('/events/{eventId}/', [EventApiController::class, 'destroy']);

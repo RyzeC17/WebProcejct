@@ -14,9 +14,9 @@ class HomeController extends Controller
 
         return view('home.index', [
             'featuredEvents' => Event::query()
-                ->where('status', Event::STATUS_PUBLISHED)
+                ->where('stato', Event::STATUS_PUBLISHED)
                 ->withRegistrationCounts()
-                ->orderBy('start_datetime')
+                ->orderBy('inizio_il')
                 ->limit(3)
                 ->get(),
         ]);

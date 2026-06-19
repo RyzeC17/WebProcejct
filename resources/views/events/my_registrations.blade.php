@@ -20,8 +20,8 @@
                         <div class="card-body p-4">
                             <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                                 <div>
-                                    <h2 class="h4">{{ $registration->event->title }}</h2>
-                                    <p class="text-muted mb-1">{{ $registration->event->start_datetime?->format('d/m/Y H:i') }} &middot; {{ $registration->event->venue_name }}</p>
+                                    <h2 class="h4">{{ $registration->event->titolo }}</h2>
+                                    <p class="text-muted mb-1">{{ $registration->event->inizio_il?->format('d/m/Y H:i') }} &middot; {{ $registration->event->nome_luogo }}</p>
                                     <span class="status-pill status-{{ $registration->event->operational_state }}">{{ $registration->event->operational_state_label }}</span>
                                     <span class="badge text-bg-light">{{ $registration->status_label }}</span>
                                 </div>
@@ -37,14 +37,14 @@
                                     <form data-json-form action="{{ route('events.update-registration', $registration->id) }}" method="post">
                                         @csrf
                                         <label class="form-label" for="note-{{ $registration->id }}">Nota personale</label>
-                                        <textarea class="form-control" id="note-{{ $registration->id }}" name="attendee_note" rows="3" @disabled($registration->status === 'cancelled')>{{ $registration->attendee_note }}</textarea>
-                                        <button class="btn btn-outline-dark mt-3" type="submit" @disabled($registration->status === 'cancelled') data-loading-label="Aggiornamento...">Aggiorna nota</button>
+                                        <textarea class="form-control" id="note-{{ $registration->id }}" name="attendee_note" rows="3" @disabled($registration->stato === 'cancelled')>{{ $registration->nota_partecipante }}</textarea>
+                                        <button class="btn btn-outline-dark mt-3" type="submit" @disabled($registration->stato === 'cancelled') data-loading-label="Aggiornamento...">Aggiorna nota</button>
                                     </form>
                                 </div>
                                 <div class="col-lg-4 d-flex align-items-end">
                                     <form data-json-form action="{{ route('events.cancel-registration', $registration->id) }}" method="post" class="w-100">
                                         @csrf
-                                        <button class="btn btn-outline-danger w-100" type="submit" @disabled($registration->status === 'cancelled') data-loading-label="Annullamento...">Annulla adesione</button>
+                                        <button class="btn btn-outline-danger w-100" type="submit" @disabled($registration->stato === 'cancelled') data-loading-label="Annullamento...">Annulla adesione</button>
                                     </form>
                                 </div>
                             </div>

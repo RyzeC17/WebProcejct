@@ -37,15 +37,15 @@ class ApiResponse
     {
         return [
             'id' => $field->id,
-            'label' => $field->label,
-            'field_type' => $field->field_type,
-            'is_required' => (bool) $field->is_required,
-            'display_order' => $field->display_order,
-            'options' => $field->field_type === EventCustomField::TYPE_SELECT
+            'label' => $field->etichetta,
+            'field_type' => $field->tipo_campo,
+            'is_required' => (bool) $field->obbligatorio,
+            'display_order' => $field->ordine_visualizzazione,
+            'options' => $field->tipo_campo === EventCustomField::TYPE_SELECT
                 ? $field->options->map(fn ($option) => [
                     'id' => $option->id,
-                    'value' => $option->value,
-                    'display_order' => $option->display_order,
+                    'value' => $option->valore,
+                    'display_order' => $option->ordine_visualizzazione,
                 ])->values()->all()
                 : [],
         ];
@@ -57,19 +57,19 @@ class ApiResponse
 
         return [
             'id' => $event->id,
-            'title' => $event->title,
+            'title' => $event->titolo,
             'slug' => $event->slug,
-            'description' => $event->description,
-            'venue_name' => $event->venue_name,
-            'venue_address' => $event->venue_address,
-            'notes' => $event->notes,
-            'max_participants' => $event->max_participants,
-            'price' => (string) $event->price,
-            'start_datetime' => self::normalize($event->start_datetime),
-            'end_datetime' => self::normalize($event->end_datetime),
-            'registration_deadline' => self::normalize($event->registration_deadline),
-            'event_type' => $event->event_type,
-            'status' => $event->status,
+            'description' => $event->descrizione,
+            'venue_name' => $event->nome_luogo,
+            'venue_address' => $event->indirizzo_luogo,
+            'notes' => $event->note,
+            'max_participants' => $event->max_partecipanti,
+            'price' => (string) $event->prezzo,
+            'start_datetime' => self::normalize($event->inizio_il),
+            'end_datetime' => self::normalize($event->fine_il),
+            'registration_deadline' => self::normalize($event->scadenza_iscrizioni),
+            'event_type' => $event->tipo_evento,
+            'status' => $event->stato,
             'operational_state' => $event->operational_state,
             'remaining_seats' => $event->remaining_seats,
             'accepts_new_requests' => $event->accepts_new_requests,
@@ -83,21 +83,21 @@ class ApiResponse
 
         return [
             'id' => $registration->id,
-            'event_id' => $registration->event_id,
-            'event_title' => $registration->event?->title,
-            'status' => $registration->status,
-            'attendee_note' => $registration->attendee_note,
-            'created_at' => self::normalize($registration->created_at),
-            'updated_at' => self::normalize($registration->updated_at),
-            'cancelled_at' => self::normalize($registration->cancelled_at),
-            'promoted_at' => self::normalize($registration->promoted_at),
+            'event_id' => $registration->evento_id,
+            'event_title' => $registration->event?->titolo,
+            'status' => $registration->stato,
+            'attendee_note' => $registration->nota_partecipante,
+            'created_at' => self::normalize($registration->creato_il),
+            'updated_at' => self::normalize($registration->aggiornato_il),
+            'cancelled_at' => self::normalize($registration->annullata_il),
+            'promoted_at' => self::normalize($registration->promossa_il),
             'custom_answers' => $registration->customAnswers
                 ->map(fn (RegistrationCustomAnswer $answer) => [
-                    'field_id' => $answer->field_id,
-                    'field_label' => $answer->field?->label,
-                    'field_type' => $answer->field?->field_type,
+                    'field_id' => $answer->campo_id,
+                    'field_label' => $answer->field?->etichetta,
+                    'field_type' => $answer->field?->tipo_campo,
                     'value' => $answer->display_value,
-                    'selected_option_id' => $answer->selected_option_id,
+                    'selected_option_id' => $answer->opzione_selezionata_id,
                 ])
                 ->values()
                 ->all(),
@@ -116,12 +116,12 @@ class ApiResponse
 
         return [
             'id' => $event->id,
-            'title' => $event->title,
-            'start' => self::normalize($event->start_datetime),
-            'end' => self::normalize($event->end_datetime),
+            'title' => $event->titolo,
+            'start' => self::normalize($event->inizio_il),
+            'end' => self::normalize($event->fine_il),
             'url' => route('events.detail', $event->slug),
-            'event_type' => $event->event_type,
-            'color' => $colors[$event->event_type] ?? '#6b7280',
+            'event_type' => $event->tipo_evento,
+            'color' => $colors[$event->tipo_evento] ?? '#6b7280',
         ];
     }
 
@@ -132,8 +132,8 @@ class ApiResponse
         return [
             'id' => $log->id,
             'actor' => $log->actor?->display_name,
-            'changed_fields' => $log->changed_fields,
-            'created_at' => self::normalize($log->created_at),
+            'changed_fields' => $log->campi_modificati,
+            'created_at' => self::normalize($log->creato_il),
         ];
     }
 
@@ -144,10 +144,10 @@ class ApiResponse
         return [
             'id' => $feedback->id,
             'user' => $feedback->user?->display_name,
-            'rating' => $feedback->rating,
-            'comment' => $feedback->comment,
-            'created_at' => self::normalize($feedback->created_at),
-            'updated_at' => self::normalize($feedback->updated_at),
+            'rating' => $feedback->valutazione,
+            'comment' => $feedback->commento,
+            'created_at' => self::normalize($feedback->creato_il),
+            'updated_at' => self::normalize($feedback->aggiornato_il),
         ];
     }
 

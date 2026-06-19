@@ -47,7 +47,7 @@ class RegistrationApiController extends Controller
         }
 
         return ApiResponse::json(
-            $registration->status === Registration::STATUS_ACTIVE
+            $registration->stato === Registration::STATUS_ACTIVE
                 ? 'Iscrizione salvata con successo.'
                 : "Richiesta registrata in lista d'attesa.",
             true,
@@ -64,9 +64,9 @@ class RegistrationApiController extends Controller
         }
 
         $items = Registration::query()
-            ->where('user_id', $request->user()->id)
+            ->where('utente_id', $request->user()->id)
             ->with('event', 'customAnswers.field', 'customAnswers.selectedOption')
-            ->latest('created_at')
+            ->latest('creato_il')
             ->get();
 
         return ApiResponse::json('Lista iscrizioni recuperata con successo.', true, [
@@ -81,7 +81,7 @@ class RegistrationApiController extends Controller
         }
 
         $registration = Registration::query()
-            ->where('user_id', $request->user()->id)
+            ->where('utente_id', $request->user()->id)
             ->with('event', 'customAnswers.field', 'customAnswers.selectedOption')
             ->find($registrationId);
 
@@ -100,7 +100,7 @@ class RegistrationApiController extends Controller
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
 
-        $registration = Registration::query()->where('user_id', $request->user()->id)->with('event')->find($registrationId);
+        $registration = Registration::query()->where('utente_id', $request->user()->id)->with('event')->find($registrationId);
         if (! $registration) {
             return ApiResponse::json('Iscrizione non trovata.', false, [], [], 404);
         }
@@ -129,7 +129,7 @@ class RegistrationApiController extends Controller
             return ApiResponse::json('Autenticazione richiesta.', false, [], [], 401);
         }
 
-        $registration = Registration::query()->where('user_id', $request->user()->id)->with('event')->find($registrationId);
+        $registration = Registration::query()->where('utente_id', $request->user()->id)->with('event')->find($registrationId);
         if (! $registration) {
             return ApiResponse::json('Iscrizione non trovata.', false, [], [], 404);
         }

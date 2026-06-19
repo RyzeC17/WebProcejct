@@ -13,25 +13,23 @@ return new class extends Migration
     {
         Schema::create('utenti', function (Blueprint $table) {
             $table->id();
-            $table->string('username', 150)->unique();
-            $table->string('first_name', 150)->default('');
-            $table->string('last_name', 150)->default('');
+            $table->string('nome_utente', 150)->unique();
+            $table->string('nome', 150)->default('');
+            $table->string('cognome', 150)->default('');
             $table->string('email', 254)->unique();
             $table->string('password');
-            $table->boolean('is_staff')->default(false);
-            $table->boolean('is_active')->default(true);
-            $table->boolean('is_superuser')->default(false);
-            $table->dateTime('last_login')->nullable();
-            $table->dateTime('date_joined')->useCurrent();
+            $table->boolean('attivo')->default(true);
+            $table->dateTime('ultimo_accesso')->nullable();
+            $table->dateTime('data_iscrizione')->useCurrent();
         });
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
+        Schema::create('token_recupero_password', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        Schema::create('sessions', function (Blueprint $table) {
+        Schema::create('sessioni', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index()->constrained('utenti')->nullOnDelete();
             $table->string('ip_address', 45)->nullable();
@@ -46,8 +44,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sessions');
-        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessioni');
+        Schema::dropIfExists('token_recupero_password');
         Schema::dropIfExists('utenti');
     }
 };
